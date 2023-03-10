@@ -1,0 +1,1072 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ___                   ____   ___   ____ ____          ____    ___
+ / _ \ _ __   ___ _ __ |  _ \ / _ \ / ___/ ___|  __   _|___ \  / _ \
+| | | | '_ \ / _ \ '_ \| |_) | | | | |   \___ \  \ \ / / __) || | | |
+| |_| | |_) |  __/ | | |  _ <| |_| | |___ ___) |  \ V / / __/ | |_| |
+ \___/| .__/ \___|_| |_|_| \_\\___/ \____|____/    \_/ |_____(_)___/
+      |_|
+
+OpenROCS: Open Robotic Observatory Control System
+Copyright (C) 2011-2014 by Institut d'Estudis Espacials de Catalunya (IEEC)
+More information in http://www.ieec.cat or ieec@ieec.cat
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<root>
+	<!-- Monitor: GOAL. Check the existence of SYS_GOAL and SYS_USER variables -->
+	<monitor>
+		<name>goal</name>
+		<task>
+			<send>add SYS_USER=UNKNOWN</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$SYS_USER=='UNKNOWN'
+					]]></eval>
+					<send>add SYS_GOAL=STOP</send>
+				</when>
+				<otherwise>
+					<send>add SYS_GOAL=$SYS_USER</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+	</monitor>
+	<!-- Monitor: STATUS. Check the existence of the SYS_STATUS variable -->
+	<monitor>
+		<name>status</name>
+		<task>
+			<send>add SYS_STATUS=UNKNOWN</send>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+	</monitor>
+	<!-- Monitor: NODE. Update variables for those systems with a network -->
+	<!--                connection (router, SAIs, PDUs and computers) -->
+	<monitor>
+		<name>node</name>
+		<!-- Define all the HK_NODE undefined variables -->
+		<!-- Check TCP/IP to router -->
+		<task>
+			<shell>ping -c 3 -i 1 -W 1 $IP_ROUTER | grep received</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4>0</eval>
+					<send>update HK_NODE_ROUTER_PING_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_ROUTER_PING_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check TCP/IP to localhost (TELESCOPE) -->
+		<task>
+			<shell>ping -c 3 -i 1 -W 1 $IP_TELESCOPE | grep received</shell>
+			<interval>$TIME_NOMINAL</interval>
+			<choose>
+				<when>
+					<eval>$STDOUT4>0</eval>
+					<send>update HK_NODE_TELESCOPE_PING_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_TELESCOPE_PING_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</task>
+		<!-- Check TCP/IP to local server (NAS) -->
+		<task>
+			<shell>ping -c 3 -i 1 -W 1 $IP_NAS | grep received</shell>
+			<interval>$TIME_NOMINAL</interval>
+			<choose>
+				<when>
+					<eval>$STDOUT4>0</eval>
+					<send>update HK_NODE_NAS_PING_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_NAS_PING_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</task>
+		<!-- Check TCP/IP to redundant system (REDUNDANT) -->
+		<task>
+			<shell>ping -c 3 -i 1 -W 1 $IP_REDUNDANT | grep received</shell>
+			<interval>$TIME_NOMINAL</interval>
+			<choose>
+				<when>
+					<eval>$STDOUT4>0</eval>
+					<send>update HK_NODE_REDUNDANT_PING_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_REDUNDANT_PING_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</task>
+		<!-- Check TCP/IP to meteorological server (METEO) -->
+		<task>
+			<shell>ping -c 3 -i 1 -W 1 $IP_METEO | grep received</shell>
+			<interval>$TIME_NOMINAL</interval>
+			<choose>
+				<when>
+					<eval>$STDOUT4>0</eval>
+					<send>update HK_NODE_METEO_PING_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_METEO_PING_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</task>
+		<!-- Check TCP/IP to local terminal (DESKTOP) -->
+		<task>
+			<shell>ping -c 3 -i 1 -W 1 $IP_DESKTOP | grep received</shell>
+			<interval>$TIME_NOMINAL</interval>
+			<choose>
+				<when>
+					<eval>$STDOUT4>0</eval>
+					<send>update HK_NODE_DESKTOP_PING_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_DESKTOP_PING_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</task>
+		<!-- Check TCP/IP to control room PDU (PDU_N0) -->
+		<task>
+			<shell>ping -c 3 -i 1 -W 1 $IP_PDU_N0 | grep received</shell>
+			<interval>$TIME_NOMINAL</interval>
+			<choose>
+				<when>
+					<eval>$STDOUT4>0</eval>
+					<send>update HK_NODE_PDU_N0_PING_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_PDU_N0_PING_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</task>
+		<!-- Check TCP/IP to telescope/instrument PDU (PDU_N1) -->
+		<task>
+			<shell>ping -c 3 -i 1 -W 1 $IP_PDU_N1 | grep received</shell>
+			<interval>$TIME_NOMINAL</interval>
+			<choose>
+				<when>
+					<eval>$STDOUT4>0</eval>
+					<send>update HK_NODE_PDU_N1_PING_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_PDU_N1_PING_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</task>
+		<!-- Check TCP/IP to communications PDU (PDU_N2) -->
+		<task>
+			<shell>ping -c 3 -i 1 -W 1 $IP_PDU_N2 | grep received</shell>
+			<interval>$TIME_NOMINAL</interval>
+			<choose>
+				<when>
+					<eval>$STDOUT4>0</eval>
+					<send>update HK_NODE_PDU_N2_PING_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_PDU_N2_PING_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</task>
+		<!-- Check router power supply -->
+		<task>
+			<shell>snmpget -v1 -c public $IP_PDU_N2 $OID_PDU_N3</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_NODE_ROUTER_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_NODE_ROUTER_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_ROUTER_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check TELESCOPE power supply -->
+		<task>
+			<shell>snmpget -v1 -c public $IP_PDU_N0 $OID_PDU_N1</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_NODE_TELESCOPE_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_NODE_TELESCOPE_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_TELESCOPE_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check NAS power supply (two power supplies) -->
+		<task>
+			<shell>snmpget -v1 -c public $IP_PDU_N2 $OID_PDU_N1</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_NODE_NAS_POWER_N1_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_NODE_NAS_POWER_N1_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_NAS_POWER_N1_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<task>
+			<shell>snmpget -v1 -c public $IP_PDU_N2 $OID_PDU_N2</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_NODE_NAS_POWER_N2_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_NODE_NAS_POWER_N2_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_NAS_POWER_N2_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check REDUNDANT power supply -->
+		<task>
+			<shell>snmpget -v1 -c public $IP_PDU_N0 $OID_PDU_N3</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_NODE_REDUNDANT_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_NODE_REDUNDANT_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_REDUNDANT_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check METEO power supply -->
+		<task>
+			<shell>snmpget -v1 -c public $IP_PDU_N0 $OID_PDU_N4</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_NODE_METEO_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_NODE_METEO_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_METEO_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check DESKTOP power supply -->
+		<task>
+			<shell>snmpget -v1 -c public $IP_PDU_N0 $OID_PDU_N2</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_NODE_DESKTOP_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_NODE_DESKTOP_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_NODE_DESKTOP_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+	</monitor>
+	<!-- Monitor: DEVICE. Update variables for those systems without a network -->
+	<!--                  connection (fiber-links, sensors, etc.) -->
+	<monitor>
+		<name>device</name>
+		<!-- Check UdL radiofrequency fiber link power supply -->
+		<task>
+			<shell>snmpget -v1 -c public $IP_PDU_N2 $OID_PDU_N4</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_DEVICE_UDL_FIBER_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_DEVICE_UDL_FIBER_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_DEVICE_UDL_FIBER_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check communications tower power supply -->
+		<task>
+			<send>add HK_DEVICE_TOWER_POWER_STATUS=ERROR</send>
+			<shell>snmpget -v1 -c public $IP_PDU_N2 $OID_PDU_N5</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_DEVICE_TOWER_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_DEVICE_TOWER_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_DEVICE_TOWER_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+	</monitor>
+	<!-- Monitor: METEO. Update variables related with time and -->
+	<!--                 meteorological information -->
+	<monitor>
+		<name>meteo</name>
+		<!-- Show the changing timestamp to prove that stack is being refreshed -->
+		<task>
+			<php>time()</php>
+			<interval>$TIME_SHORT</interval>
+			<send>update SDP_METEO_TIMESTAMP=$STDOUT1</send>
+		</task>
+		<!-- Check wxd.php daemon -->
+		<task>
+			<send>add HK_METEO_WXD_WRITE_GOAL=UNKNOWN</send>
+			<send>add HK_METEO_WXD_WRITE_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_METEO_WXD_WRITE_STATUS!='STARTING' &&
+						$HK_METEO_WXD_WRITE_STATUS!='STOPPING'
+					]]></eval>
+					<action>meteo.xml[wxd_write_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check wxd daemon -->
+		<task>
+			<send>add HK_METEO_WXD_READ_GOAL=UNKNOWN</send>
+			<send>add HK_METEO_WXD_READ_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_METEO_WXD_READ_STATUS!='STARTING' &&
+						$HK_METEO_WXD_READ_STATUS!='STOPPING'
+					]]></eval>
+					<action>meteo.xml[wxd_read_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check gpsd daemon -->
+		<task>
+			<send>add HK_METEO_GPSD_GOAL=UNKNOWN</send>
+			<send>add HK_METEO_GPSD_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_METEO_GPSD_STATUS!='STARTING' &&
+						$HK_METEO_GPSD_STATUS!='STOPPING'
+					]]></eval>
+					<action>meteo.xml[gpsd_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check meteorological sensors power supply -->
+		<task>
+			<send>add HK_METEO_SENSORS_POWER_STATUS=ERROR</send>
+			<shell>snmpget -v1 -c public $IP_PDU_N0 $OID_PDU_N8</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_METEO_SENSORS_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_METEO_SENSORS_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_METEO_SENSORS_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Retrieve meteorological data from Davis weather station -->
+		<task>
+			<shell>snmpwalk -c public -v 1 $IP_METEO $OID_DAVIS | cut -f 2,2 -d '"'</shell>
+			<!-- Parse the resulting string to retrieve each data value -->
+			<choose>
+				<when>
+					<eval><![CDATA[strpos($STDOUT,"DAVIS")!==FALSE]]></eval>
+					<!-- Control room temperature -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT3) &&
+								$STDOUT3>=$METEO_MIN_TEMPERATURE &&
+								$STDOUT3<=$METEO_MAX_TEMPERATURE &&
+								$STDOUT4-$SDP_METEO_DAVIS_TEMPERATURE_INDOOR_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_TEMPERATURE_INDOOR_STATUS=GOOD</send>
+							<send>update SDP_METEO_DAVIS_TEMPERATURE_INDOOR_VALUE=$STDOUT3</send>
+							<send>update SDP_METEO_DAVIS_TEMPERATURE_INDOOR_TIME=$STDOUT4</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								!isset($SDP_METEO_DAVIS_TEMPERATURE_INDOOR_TIME) ||
+								$STDOUT4-$SDP_METEO_DAVIS_TEMPERATURE_INDOOR_TIME<=0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_TEMPERATURE_INDOOR_STATUS=OUTDATED_ERROR</send>
+							<send>add SDP_METEO_DAVIS_TEMPERATURE_INDOOR_TIME=$STDOUT4</send>
+							<fromsec>$TIME_METEO_CHECK</fromsec>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_DAVIS_TEMPERATURE_INDOOR_STATUS=VALUE_ERROR</send>
+							<send>update SDP_METEO_DAVIS_TEMPERATURE_INDOOR_VALUE=$STDOUT3</send>
+							<send>update SDP_METEO_DAVIS_TEMPERATURE_INDOOR_TIME=$STDOUT4</send>
+						</otherwise>
+					</choose>
+					<!-- Control room humidity -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT7) &&
+								$STDOUT7>=$METEO_MIN_HUMIDITY_DRY &&
+								$STDOUT7<$METEO_MIN_HUMIDITY_WET &&
+								$STDOUT8-$SDP_METEO_DAVIS_HUMIDITY_INDOOR_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_HUMIDITY_INDOOR_STATUS=DRY</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_INDOOR_VALUE=$STDOUT7</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_INDOOR_TIME=$STDOUT8</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT7) &&
+								$STDOUT7>=$METEO_MIN_HUMIDITY_WET &&
+								$STDOUT7<$METEO_MAX_HUMIDITY &&
+								$STDOUT8-$SDP_METEO_DAVIS_HUMIDITY_INDOOR_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_HUMIDITY_INDOOR_STATUS=WET</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_INDOOR_VALUE=$STDOUT7</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_INDOOR_TIME=$STDOUT8</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								!isset($SDP_METEO_DAVIS_HUMIDITY_INDOOR_TIME) ||
+								$STDOUT8-$SDP_METEO_DAVIS_HUMIDITY_INDOOR_TIME<=0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_HUMIDITY_INDOOR_STATUS=OUTDATED_ERROR</send>
+							<send>add SDP_METEO_DAVIS_HUMIDITY_INDOOR_TIME=$STDOUT8</send>
+							<fromsec>$TIME_METEO_CHECK</fromsec>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_DAVIS_HUMIDITY_INDOOR_STATUS=VALUE_ERROR</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_INDOOR_VALUE=$STDOUT7</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_INDOOR_TIME=$STDOUT8</send>
+						</otherwise>
+					</choose>
+					<!-- TJO temperature -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT11) &&
+								$STDOUT11>=$METEO_MIN_TEMPERATURE &&
+								$STDOUT11<=$METEO_MAX_TEMPERATURE &&
+								$STDOUT12-$SDP_METEO_DAVIS_TEMPERATURE_TJO_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_TEMPERATURE_TJO_STATUS=GOOD</send>
+							<send>update SDP_METEO_DAVIS_TEMPERATURE_TJO_VALUE=$STDOUT11</send>
+							<send>update SDP_METEO_DAVIS_TEMPERATURE_TJO_TIME=$STDOUT12</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								!isset($SDP_METEO_DAVIS_TEMPERATURE_TJO_TIME) ||
+								$STDOUT12-$SDP_METEO_DAVIS_TEMPERATURE_TJO_TIME<=0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_TEMPERATURE_TJO_STATUS=OUTDATED_ERROR</send>
+							<send>add SDP_METEO_DAVIS_TEMPERATURE_TJO_TIME=$STDOUT12</send>
+							<fromsec>$TIME_METEO_CHECK</fromsec>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_DAVIS_TEMPERATURE_TJO_STATUS=VALUE_ERROR</send>
+							<send>update SDP_METEO_DAVIS_TEMPERATURE_TJO_VALUE=$STDOUT11</send>
+							<send>update SDP_METEO_DAVIS_TEMPERATURE_TJO_TIME=$STDOUT12</send>
+						</otherwise>
+					</choose>
+					<!-- TJO humidity -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT15) &&
+								$STDOUT15>=$METEO_MIN_HUMIDITY_DRY &&
+								$STDOUT15<$METEO_MIN_HUMIDITY_WET &&
+								$STDOUT16-$SDP_METEO_DAVIS_HUMIDITY_TJO_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_HUMIDITY_TJO_STATUS=DRY</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_TJO_VALUE=$STDOUT15</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_TJO_TIME=$STDOUT16</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT15) &&
+								$STDOUT15>=$METEO_MIN_HUMIDITY_WET &&
+								$STDOUT15<$METEO_MAX_HUMIDITY &&
+								$STDOUT16-$SDP_METEO_DAVIS_HUMIDITY_TJO_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_HUMIDITY_TJO_STATUS=WET</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_TJO_VALUE=$STDOUT15</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_TJO_TIME=$STDOUT16</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								!isset($SDP_METEO_DAVIS_HUMIDITY_TJO_TIME) ||
+								$STDOUT16-$SDP_METEO_DAVIS_HUMIDITY_TJO_TIME<=0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_HUMIDITY_TJO_STATUS=OUTDATED_ERROR</send>
+							<send>add SDP_METEO_DAVIS_HUMIDITY_TJO_TIME=$STDOUT16</send>
+							<fromsec>$TIME_METEO_CHECK</fromsec>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_DAVIS_HUMIDITY_TJO_STATUS=VALUE_ERROR</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_TJO_VALUE=$STDOUT15</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_TJO_TIME=$STDOUT16</send>
+						</otherwise>
+					</choose>
+					<!-- Outdoor temperature -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT19) &&
+								$STDOUT19>=$METEO_MIN_TEMPERATURE &&
+								$STDOUT19<=$METEO_MAX_TEMPERATURE &&
+								$STDOUT20-$SDP_METEO_DAVIS_TEMPERATURE_OUTDOOR_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_TEMPERATURE_OUTDOOR_STATUS=GOOD</send>
+							<send>update SDP_METEO_DAVIS_TEMPERATURE_OUTDOOR_VALUE=$STDOUT19</send>
+							<send>update SDP_METEO_DAVIS_TEMPERATURE_OUTDOOR_TIME=$STDOUT20</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								!isset($SDP_METEO_DAVIS_TEMPERATURE_OUTDOOR_TIME) ||
+								$STDOUT20-$SDP_METEO_DAVIS_TEMPERATURE_OUTDOOR_TIME<=0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_TEMPERATURE_OUTDOOR_STATUS=OUTDATED_ERROR</send>
+							<send>add SDP_METEO_DAVIS_TEMPERATURE_OUTDOOR_TIME=$STDOUT20</send>
+							<fromsec>$TIME_METEO_CHECK</fromsec>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_DAVIS_TEMPERATURE_OUTDOOR_STATUS=VALUE_ERROR</send>
+							<send>update SDP_METEO_DAVIS_TEMPERATURE_OUTDOOR_VALUE=$STDOUT19</send>
+							<send>update SDP_METEO_DAVIS_TEMPERATURE_OUTDOOR_TIME=$STDOUT20</send>
+						</otherwise>
+					</choose>
+					<!-- Outdoor humidity -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT23) &&
+								$STDOUT23>=$METEO_MIN_HUMIDITY_DRY &&
+								$STDOUT23<$METEO_MIN_HUMIDITY_WET &&
+								$STDOUT24-$SDP_METEO_DAVIS_HUMIDITY_OUTDOOR_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_HUMIDITY_OUTDOOR_STATUS=DRY</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_OUTDOOR_VALUE=$STDOUT23</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_OUTDOOR_TIME=$STDOUT24</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT23) &&
+								$STDOUT23>=$METEO_MIN_HUMIDITY_WET &&
+								$STDOUT23<$METEO_MAX_HUMIDITY &&
+								$STDOUT24-$SDP_METEO_DAVIS_HUMIDITY_OUTDOOR_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_HUMIDITY_OUTDOOR_STATUS=WET</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_OUTDOOR_VALUE=$STDOUT23</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_OUTDOOR_TIME=$STDOUT24</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								!isset($SDP_METEO_DAVIS_HUMIDITY_OUTDOOR_TIME) ||
+								$STDOUT24-$SDP_METEO_DAVIS_HUMIDITY_OUTDOOR_TIME<=0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_HUMIDITY_OUTDOOR_STATUS=OUTDATED_ERROR</send>
+							<send>add SDP_METEO_DAVIS_HUMIDITY_OUTDOOR_TIME=$STDOUT24</send>
+							<fromsec>$TIME_METEO_CHECK</fromsec>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_DAVIS_HUMIDITY_OUTDOOR_STATUS=VALUE_ERROR</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_OUTDOOR_VALUE=$STDOUT23</send>
+							<send>update SDP_METEO_DAVIS_HUMIDITY_OUTDOOR_TIME=$STDOUT24</send>
+						</otherwise>
+					</choose>
+					<!-- Wind speed -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT27) &&
+								$STDOUT27>=$METEO_MIN_WIND &&
+								$STDOUT27<$METEO_MIN_WIND_MEDIUM &&
+								$STDOUT28-$SDP_METEO_DAVIS_WIND_SPEED_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_WIND_SPEED_STATUS=LIGHT</send>
+							<send>update SDP_METEO_DAVIS_WIND_SPEED_VALUE=$STDOUT27</send>
+							<send>update SDP_METEO_DAVIS_WIND_SPEED_TIME=$STDOUT28</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT27) &&
+								$STDOUT27>=$METEO_MIN_WIND_MEDIUM &&
+								$STDOUT27<$METEO_MAX_WIND_MEDIUM &&
+								$STDOUT28-$SDP_METEO_DAVIS_WIND_SPEED_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_WIND_SPEED_STATUS=MEDIUM</send>
+							<send>update SDP_METEO_DAVIS_WIND_SPEED_VALUE=$STDOUT27</send>
+							<send>update SDP_METEO_DAVIS_WIND_SPEED_TIME=$STDOUT28</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT27) &&
+								$STDOUT27>=$METEO_MAX_WIND_MEDIUM &&
+								$STDOUT27<$METEO_MAX_WIND &&
+								$STDOUT28-$SDP_METEO_DAVIS_WIND_SPEED_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_WIND_SPEED_STATUS=STRONG</send>
+							<send>update SDP_METEO_DAVIS_WIND_SPEED_VALUE=$STDOUT27</send>
+							<send>update SDP_METEO_DAVIS_WIND_SPEED_TIME=$STDOUT28</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								!isset($SDP_METEO_DAVIS_WIND_SPEED_TIME) ||
+								$STDOUT28-$SDP_METEO_DAVIS_WIND_SPEED_TIME<=0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_WIND_SPEED_STATUS=OUTDATED_ERROR</send>
+							<send>add SDP_METEO_DAVIS_WIND_SPEED_TIME=$STDOUT28</send>
+							<fromsec>$TIME_METEO_CHECK</fromsec>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_DAVIS_WIND_SPEED_STATUS=VALUE_ERROR</send>
+							<send>update SDP_METEO_DAVIS_WIND_SPEED_VALUE=$STDOUT27</send>
+							<send>update SDP_METEO_DAVIS_WIND_SPEED_TIME=$STDOUT28</send>
+						</otherwise>
+					</choose>
+					<!-- Wind direction -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT31) &&
+								$STDOUT31>=$METEO_MIN_DIRECTION &&
+								$STDOUT31<=$METEO_MAX_DIRECTION &&
+								$STDOUT32-$SDP_METEO_DAVIS_WIND_DIRECTION_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_WIND_DIRECTION_STATUS=GOOD</send>
+							<send>update SDP_METEO_DAVIS_WIND_DIRECTION_VALUE=$STDOUT31</send>
+							<send>update SDP_METEO_DAVIS_WIND_DIRECTION_TIME=$STDOUT32</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								!isset($SDP_METEO_DAVIS_WIND_DIRECTION_TIME) ||
+								$STDOUT32-$SDP_METEO_DAVIS_WIND_DIRECTION_TIME<=0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_WIND_DIRECTION_STATUS=OUTDATED_ERROR</send>
+							<send>add SDP_METEO_DAVIS_WIND_DIRECTION_TIME=$STDOUT32</send>
+							<fromsec>$TIME_METEO_CHECK</fromsec>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_DAVIS_WIND_DIRECTION_STATUS=VALUE_ERROR</send>
+							<send>update SDP_METEO_DAVIS_WIND_DIRECTION_VALUE=$STDOUT31</send>
+							<send>update SDP_METEO_DAVIS_WIND_DIRECTION_TIME=$STDOUT32</send>
+						</otherwise>
+					</choose>
+					<!-- Pressure -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT35) &&
+								$STDOUT35>=$METEO_MIN_PRESSURE &&
+								$STDOUT35<=$METEO_MAX_PRESSURE &&
+								$STDOUT36-$SDP_METEO_DAVIS_PRESSURE_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_PRESSURE_STATUS=GOOD</send>
+							<send>update SDP_METEO_DAVIS_PRESSURE_VALUE=$STDOUT35</send>
+							<send>update SDP_METEO_DAVIS_PRESSURE_TIME=$STDOUT36</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								!isset($SDP_METEO_DAVIS_PRESSURE_TIME) ||
+								$STDOUT36-$SDP_METEO_DAVIS_PRESSURE_TIME<=0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_PRESSURE_STATUS=OUTDATED_ERROR</send>
+							<send>update SDP_METEO_DAVIS_PRESSURE_TIME=$STDOUT36</send>
+							<fromsec>$TIME_METEO_CHECK</fromsec>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_DAVIS_PRESSURE_STATUS=VALUE_ERROR</send>
+							<send>update SDP_METEO_DAVIS_PRESSURE_VALUE=$STDOUT35</send>
+							<send>update SDP_METEO_DAVIS_PRESSURE_TIME=$STDOUT36</send>
+						</otherwise>
+					</choose>
+					<!-- Rain rate -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT39) &&
+								$STDOUT39==$METEO_MIN_RAIN &&
+								$STDOUT40-$SDP_METEO_DAVIS_RAIN_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_RAIN_STATUS=DRY</send>
+							<send>update SDP_METEO_DAVIS_RAIN_VALUE=$STDOUT39</send>
+							<send>update SDP_METEO_DAVIS_RAIN_TIME=$STDOUT40</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								is_numeric($STDOUT39) &&
+								$STDOUT39>$METEO_MIN_RAIN &&
+								$STDOUT39<=$METEO_MAX_RAIN &&
+								$STDOUT40-$SDP_METEO_DAVIS_RAIN_TIME>0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_RAIN_STATUS=RAINING</send>
+							<send>update SDP_METEO_DAVIS_RAIN_VALUE=$STDOUT39</send>
+							<send>update SDP_METEO_DAVIS_RAIN_TIME=$STDOUT40</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								!isset($SDP_METEO_DAVIS_RAIN_TIME) ||
+								$STDOUT40-$SDP_METEO_DAVIS_RAIN_TIME<=0.0
+							]]></eval>
+							<send>update HK_METEO_DAVIS_RAIN_STATUS=OUTDATED_ERROR</send>
+							<send>add SDP_METEO_DAVIS_RAIN_TIME=$STDOUT40</send>
+							<fromsec>$TIME_METEO_CHECK</fromsec>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_DAVIS_RAIN_STATUS=VALUE_ERROR</send>
+							<send>update SDP_METEO_DAVIS_RAIN_VALUE=$STDOUT39</send>
+							<send>update SDP_METEO_DAVIS_RAIN_TIME=$STDOUT40</send>
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					<send>update HK_METEO_DAVIS_TEMPERATURE_INDOOR_STATUS=GET_ERROR</send>
+					<send>update HK_METEO_DAVIS_HUMIDITY_INDOOR_STATUS=GET_ERROR</send>
+					<send>update HK_METEO_DAVIS_TEMPERATURE_TJO_STATUS=GET_ERROR</send>
+					<send>update HK_METEO_DAVIS_HUMIDITY_TJO_STATUS=GET_ERROR</send>
+					<send>update HK_METEO_DAVIS_TEMPERATURE_OUTDOOR_STATUS=GET_ERROR</send>
+					<send>update HK_METEO_DAVIS_HUMIDITY_OUTDOOR_STATUS=GET_ERROR</send>
+					<send>update HK_METEO_DAVIS_WIND_SPEED_STATUS=GET_ERROR</send>
+					<send>update HK_METEO_DAVIS_WIND_DIRECTION_STATUS=GET_ERROR</send>
+					<send>update HK_METEO_DAVIS_PRESSURE_STATUS=GET_ERROR</send>
+					<send>update HK_METEO_DAVIS_RAIN_STATUS=GET_ERROR</send>
+					<fromsec>$TIME_METEO_CHECK</fromsec>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+	</monitor>
+	<!-- Monitor: TJO. Update variables for TJO -->
+	<monitor>
+		<name>tjo</name>
+		<!-- Check TJO power supply: 5V -->
+		<task>
+			<send>add HK_TJO_5V_POWER_GOAL=UNKNOWN</send>
+			<send>add HK_TJO_5V_POWER_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_TJO_5V_POWER_STATUS!='STARTING' &&
+						$HK_TJO_5V_POWER_STATUS!='STOPPING'
+					]]></eval>
+					<action>tjo.xml[5v_pdu_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check TJO power supply: 12V -->
+		<task>
+			<send>add HK_TJO_12V_POWER_GOAL=UNKNOWN</send>
+			<send>add HK_TJO_12V_POWER_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_TJO_12V_POWER_STATUS!='STARTING' &&
+						$HK_TJO_12V_POWER_STATUS!='STOPPING'
+					]]></eval>
+					<action>tjo.xml[12v_pdu_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check TJO power supply: 24V -->
+		<task>
+			<send>add HK_TJO_24V_POWER_GOAL=UNKNOWN</send>
+			<send>add HK_TJO_24V_POWER_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_TJO_24V_POWER_STATUS!='STARTING' &&
+						$HK_TJO_24V_POWER_STATUS!='STOPPING'
+					]]></eval>
+					<action>tjo.xml[24v_pdu_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check TJO power supply: 80V -->
+		<task>
+			<send>add HK_TJO_80V_POWER_GOAL=UNKNOWN</send>
+			<send>add HK_TJO_80V_POWER_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_TJO_80V_POWER_STATUS!='STARTING' &&
+						$HK_TJO_80V_POWER_STATUS!='STOPPING'
+					]]></eval>
+					<action>tjo.xml[80v_pdu_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check telescoped daemon -->
+		<task>
+			<send>add HK_TJO_TELESCOPED_GOAL=UNKNOWN</send>
+			<send>add HK_TJO_TELESCOPED_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_TJO_TELESCOPED_STATUS!='STARTING' &&
+						$HK_TJO_TELESCOPED_STATUS!='STOPPING'
+					]]></eval>
+					<action>tjo.xml[telescoped_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check csimcd daemon -->
+		<task>
+			<send>add HK_TJO_CSIMCD_GOAL=UNKNOWN</send>
+			<send>add HK_TJO_CSIMCD_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_TJO_CSIMCD_STATUS!='STARTING' &&
+						$HK_TJO_CSIMCD_STATUS!='STOPPING'
+					]]></eval>
+					<action>tjo.xml[csimcd_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+	</monitor>
+	<!-- Monitor: MEIA. Update variables for MEIA -->
+	<monitor>
+		<name>meia</name>
+		<!-- Check camerad daemon -->
+		<task>
+			<send>add HK_MEIA_CAMERAD_GOAL=UNKNOWN</send>
+			<send>add HK_MEIA_CAMERAD_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_MEIA_CAMERAD_STATUS!='STARTING' &&
+						$HK_MEIA_CAMERAD_STATUS!='STOPPING'
+					]]></eval>
+					<action>meia.xml[camerad_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check MEIA CCD temperature -->
+		<task>
+			<send>add SDP_MEIA_TEMP_VALUE=0</send>
+			<send>add HK_MEIA_TEMP_GOAL=UNKNOWN</send>
+			<send>add HK_MEIA_TEMP_STATUS=ERROR</send>
+			<send>add HK_MEIA_CAMERAD_STATUS=ERROR</send>
+			<shell>ps x | grep -c "telrun$$"</shell>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$STDOUT==0 &&
+						$HK_MEIA_CAMERAD_STATUS!='STARTING' &&
+						$HK_MEIA_CAMERAD_STATUS!='STOPPING'
+					]]></eval>
+					<action>meia.xml[temp_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+	</monitor>
+	<!-- Monitor: DOME. Update variables for dome -->
+	<monitor>
+		<name>dome</name>
+		<!-- Check dome circuits power -->
+		<task>
+			<send>add HK_DOME_CIRCUITS_POWER_GOAL=UNKNOWN</send>
+			<send>add HK_DOME_CIRCUITS_POWER_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_DOME_CIRCUITS_POWER_STATUS!='STARTING' &&
+						$HK_DOME_CIRCUITS_POWER_STATUS!='STOPPING'
+					]]></eval>
+					<action>dome.xml[circuits_pdu_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check dome light power -->
+		<task>
+			<send>add HK_DOME_LIGHT_POWER_GOAL=UNKNOWN</send>
+			<send>add HK_DOME_LIGHT_POWER_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_DOME_LIGHT_POWER_STATUS!='STARTING' &&
+						$HK_DOME_LIGHT_POWER_STATUS!='STOPPING'
+					]]></eval>
+					<action>dome.xml[light_pdu_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check dome flats power -->
+		<task>
+			<send>add HK_DOME_FLATS_POWER_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_DOME_FLATS_POWER_STATUS!='STARTING' &&
+						$HK_DOME_FLATS_POWER_STATUS!='STOPPING'
+					]]></eval>
+					<action>dome.xml[flats_pdu_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+	</monitor>
+	<!-- Monitor: TELRUN. Update variables for telrun -->
+	<monitor>
+		<name>telrun</name>
+		<!-- Check the length of telrun.sls file -->
+		<task>
+			<shell>wc -l $FS_FILE_TELRUN</shell>
+			<timeout>$TIME_SHORT</timeout>
+			<choose>
+				<when>
+					<eval>$STDERR==''</eval>
+					<send>update SDP_TELRUN_NLINES_VALUE=$STDOUT1</send>
+					<choose>
+						<when>
+							<eval>$STDOUT1>0</eval>
+							<send>update HK_TELRUN_NLINES_STATUS=FULL</send>
+						</when>
+						<otherwise>
+							<send>update HK_TELRUN_NLINES_STATUS=EMPTY</send>
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					<send>update SDP_TELRUN_NLINES_VALUE=0</send>
+					<send>update HK_TELRUN_NLINES_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check the number of observations pending -->
+		<task>
+			<shell>grep "status: N" -A 7 $FS_FILE_TELRUN | grep " Target ID:" | grep -vc " Calibration," </shell>
+			<timeout>$TIME_SHORT</timeout>
+			<choose>
+				<when>
+					<eval>$STDERR==''</eval>
+					<send>update SDP_TELRUN_NOBS_VALUE=$STDOUT1</send>
+					<choose>
+						<when>
+							<eval>$STDOUT1>0</eval>
+							<send>update HK_TELRUN_NOBS_STATUS=PENDING</send>
+						</when>
+						<otherwise>
+							<send>update HK_TELRUN_NOBS_STATUS=DONE</send>
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					<send>update SDP_TELRUN_NOBS_VALUE=0</send>
+					<send>update HK_TELRUN_NOBS_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check the number of calibrations pending -->
+		<task>
+			<shell>grep "status: N" -A 7 $FS_FILE_TELRUN | grep " Target ID:" | grep -c " Calibration," </shell>
+			<timeout>$TIME_SHORT</timeout>
+			<choose>
+				<when>
+					<eval>$STDERR==''</eval>
+					<send>update SDP_TELRUN_NCAL_VALUE=$STDOUT1</send>
+					<choose>
+						<when>
+							<eval>$STDOUT1>0</eval>
+							<send>update HK_TELRUN_NCAL_STATUS=PENDING</send>
+						</when>
+						<otherwise>
+							<send>update HK_TELRUN_NCAL_STATUS=DONE</send>
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					<send>update SDP_TELRUN_NCAL_VALUE=0</send>
+					<send>update HK_TELRUN_NCAL_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+		<!-- Check telrun daemon -->
+		<task>
+			<send>add HK_TELRUN_DAEMON_GOAL=UNKNOWN</send>
+			<send>add HK_TELRUN_DAEMON_STATUS=ERROR</send>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_TELRUN_DAEMON_STATUS!='STARTING' &&
+						$HK_TELRUN_DAEMON_STATUS!='STOPPING'
+					]]></eval>
+					<action>telrun.xml[daemon_status]</action>
+				</when>
+			</choose>
+			<interval>$TIME_NOMINAL</interval>
+		</task>
+	</monitor>
+</root>

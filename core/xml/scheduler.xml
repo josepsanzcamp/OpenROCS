@@ -1,0 +1,923 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ___                   ____   ___   ____ ____          ____    ___
+ / _ \ _ __   ___ _ __ |  _ \ / _ \ / ___/ ___|  __   _|___ \  / _ \
+| | | | '_ \ / _ \ '_ \| |_) | | | | |   \___ \  \ \ / / __) || | | |
+| |_| | |_) |  __/ | | |  _ <| |_| | |___ ___) |  \ V / / __/ | |_| |
+ \___/| .__/ \___|_| |_|_| \_\\___/ \____|____/    \_/ |_____(_)___/
+      |_|
+
+OpenROCS: Open Robotic Observatory Control System
+Copyright (C) 2011-2014 by Institut d'Estudis Espacials de Catalunya (IEEC)
+More information in http://www.ieec.cat or ieec@ieec.cat
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<root>
+	<!-- Scheduler: INIT. Define OpenROCS start-up actions -->
+	<scheduler>
+		<name>init</name>
+		<hash><variable></variable></hash>
+		<log>$LOG_N0 OpenROCS started</log>
+		<!-- Recover the system variables from broadcast (not implemented yet) -->
+	</scheduler>
+	<!-- Scheduler: GOAL. Define de SYS_GOAL -->
+	<scheduler>
+		<name>goal</name>
+		<hash>
+			<variable>HK_TELRUN_NCAL_STATUS</variable>
+			<variable>HK_TELRUN_NOBS_STATUS</variable>
+			<variable>HK_TELRUN_NLINES_STATUS</variable>
+			<variable>SYS_USER</variable>
+			<variable>SYS_GOAL</variable>
+		</hash>
+		<log>$LOG_N0 Entering GOAL scheduler</log>
+		<!-- First, define the GOAL based on USER will -->
+		<choose>
+			<when>
+				<eval><![CDATA[
+					$SYS_USER=='STOP' ||
+					$SYS_USER=='START' ||
+					$SYS_USER=='INIT' ||
+					$SYS_USER=='THERMAL'
+				]]></eval>
+				<send>update SYS_GOAL=$SYS_USER</send>
+				<log>$LOG_N0 Setting SYS_GOAL=$SYS_USER</log>
+			</when>
+			<when>
+				<eval><![CDATA[
+					($SYS_USER=='AUTO' ||
+					 $SYS_USER=='SEEAUTO') &&
+					($SYS_TELRUN_STATUS=='GOOD' ||
+					 $SYS_TELRUN_STATUS=='WARNING')
+				]]></eval>
+				<!-- When desired, the number of pending observations define the GOAL -->
+				<choose>
+					<when>
+						<eval><![CDATA[
+							$HK_TELRUN_NOBS_STATUS=='PENDING'
+						]]></eval>
+						<!-- Use a trick to add SEE when needed -->
+						<php>substr($SYS_USER,0,strlen($SYS_USER)-4)."SCIENCE"</php>
+						<send>update SYS_GOAL=$STDOUT</send>
+						<log>$LOG_N0 Setting SYS_GOAL=$STDOUT</log>
+					</when>
+					<when>
+						<eval><![CDATA[
+							$HK_TELRUN_NCAL_STATUS=='PENDING'
+						]]></eval>
+						<!-- Use a trick to add SEE when needed -->
+						<php>substr($SYS_USER,0,strlen($SYS_USER)-4)."CALIB"</php>
+						<send>update SYS_GOAL=$STDOUT</send>
+						<log>$LOG_N0 Setting SYS_GOAL=$STDOUT</log>
+					</when>
+					<when>
+						<eval><![CDATA[
+							$HK_TELRUN_NLINES_STATUS=='EMPTY'
+						]]></eval>
+						<send>update SYS_GOAL=STOP</send>
+						<log>$LOG_N0 Setting SYS_GOAL=STOP</log>
+					</when>
+				</choose>
+			</when>
+			<otherwise>
+				<log>$LOG_N1 Invalid value for SYS_USER=$SYS_USER</log>
+			</otherwise>
+		</choose>
+	</scheduler>
+	<!-- Scheduler: STATUS. Show the current status of the system-->
+	<scheduler>
+		<name>status</name>
+		<hash>
+			<variable>HK_DOME_CIRCUITS_POWER_GOAL</variable>
+			<variable>HK_DOME_CIRCUITS_POWER_STATUS</variable>
+			<variable>HK_TELRUN_DAEMON_GOAL</variable>
+			<variable>HK_TELRUN_DAEMON_STATUS</variable>
+			<variable>HK_TJO_80V_POWER_GOAL</variable>
+			<variable>HK_TJO_80V_POWER_STATUS</variable>
+			<variable>SYS_GOAL</variable>
+			<variable>SYS_DOME_STATUS</variable>
+			<variable>SYS_MEIA_STATUS</variable>
+			<variable>SYS_METEO_STATUS</variable>
+			<variable>SYS_STATUS</variable>
+			<variable>SYS_TELRUN_STATUS</variable>
+			<variable>SYS_TJO_STATUS</variable>
+		</hash>
+		<log>$LOG_N0 Entering STATUS scheduler</log>
+		<php>$SYS_STATUS</php>
+		<!-- First, check the status of the schedulers -->
+		<choose>
+			<when>
+				<eval><![CDATA[
+					$SYS_DOME_STATUS=='ERROR' ||
+					$SYS_TJO_STATUS=='ERROR' ||
+					$SYS_MEIA_STATUS=='ERROR' ||
+					$SYS_TELRUN_STATUS=='ERROR'
+				]]></eval>
+				<send>update SYS_STATUS=MINOR_ERROR</send>
+			</when>
+			<when>
+				<eval><![CDATA[
+					($SYS_METEO_STATUS=='GOOD' ||
+					$SYS_METEO_STATUS=='WARNING') &&
+					($SYS_DOME_STATUS=='GOOD' ||
+					$SYS_DOME_STATUS=='WARNING') &&
+					($SYS_TJO_STATUS=='GOOD' ||
+					$SYS_TJO_STATUS=='WARNING') &&
+					($SYS_MEIA_STATUS=='GOOD' ||
+					$SYS_MEIA_STATUS=='WARNING') &&
+					($SYS_TELRUN_STATUS=='GOOD' ||
+					$SYS_TELRUN_STATUS=='WARNING')
+				]]></eval>
+				<!-- Second, check the GOAL -->
+				<choose>
+					<when>
+						<eval><![CDATA[
+							$SYS_GOAL=='START' ||
+							$SYS_GOAL=='INIT' ||
+							$SYS_GOAL=='THERMAL'
+						]]></eval>
+						<!-- Define the status according to detailed system variables -->
+						<choose>
+							<when>
+								<eval><![CDATA[
+									$HK_TJO_80V_POWER_GOAL=='ON' &&
+									$HK_TJO_80V_POWER_STATUS=='ON'
+								]]></eval>
+								<send>update SYS_STATUS=$SYS_GOAL</send>
+							</when>
+							<when>
+								<eval><![CDATA[
+									substr($STDOUT,-5)=='ERROR' ||
+									$STDOUT=='RECOVERING'
+								]]></eval>
+								<send>update SYS_STATUS=RECOVERING</send>
+							</when>
+							<otherwise>
+								<send>update SYS_STATUS=STARTING</send>
+							</otherwise>
+						</choose>
+					</when>
+					<when>
+						<eval><![CDATA[
+							substr($SYS_GOAL,-5)=='CALIB' ||
+							substr($SYS_GOAL,-7)=='SCIENCE'
+						]]></eval>
+						<choose>
+							<when>
+								<eval><![CDATA[
+									$HK_TELRUN_DAEMON_GOAL=='RUN' &&
+									$HK_TELRUN_DAEMON_STATUS=='RUN'
+								]]></eval>
+								<send>update SYS_STATUS=$SYS_GOAL</send>
+							</when>
+							<when>
+								<eval><![CDATA[
+									substr($STDOUT,-5)=='ERROR' ||
+									$STDOUT=='RECOVERING'
+								]]></eval>
+								<send>update SYS_STATUS=RECOVERING</send>
+							</when>
+							<otherwise>
+								<send>update SYS_STATUS=STARTING</send>
+							</otherwise>
+						</choose>
+					</when>
+					<when>
+						<eval><![CDATA[
+							$SYS_GOAL=='STOP'
+						]]></eval>
+						<!-- Define the status according to detailed system variables -->
+						<choose>
+							<when>
+								<eval><![CDATA[
+									$HK_DOME_CIRCUITS_POWER_GOAL=='OFF' &&
+									$HK_DOME_CIRCUITS_POWER_STATUS=='OFF'
+								]]></eval>
+								<send>update SYS_STATUS=$SYS_GOAL</send>
+							</when>
+							<when>
+								<eval><![CDATA[
+									substr($STDOUT,-5)=='ERROR' ||
+									$STDOUT=='RECOVERING'
+								]]></eval>
+								<send>update SYS_STATUS=RECOVERING</send>
+							</when>
+							<otherwise>
+								<send>update SYS_STATUS=STOPPING</send>
+							</otherwise>
+						</choose>
+					</when>
+					<otherwise>
+						<send>update SYS_STATUS=UNKNOWN</send>
+					</otherwise>
+				</choose>
+			</when>
+			<otherwise>
+				<send>update SYS_STATUS=UNKNOWN</send>
+			</otherwise>
+		</choose>
+		<!-- Log when STATUS changes -->
+		<choose>
+			<when>
+				<eval><![CDATA[
+					$SYS_STATUS!=$STDOUT
+				]]></eval>
+				<!-- Define the logging level -->
+				<choose>
+					<when>
+						<eval><![CDATA[
+							$SYS_STATUS=='MINOR_ERROR'
+						]]></eval>
+						<log>$LOG_N2 Setting SYS_STATUS=MINOR_ERROR</log>
+					</when>
+					<when>
+						<eval><![CDATA[
+							$SYS_STATUS==$SYS_GOAL ||
+							$SYS_STATUS=='STARTING' ||
+							$SYS_STATUS=='STOPPING'
+						]]></eval>
+						<log>$LOG_N0 Setting SYS_STATUS=$SYS_STATUS</log>
+					</when>
+					<otherwise>
+						<log>$LOG_N1 Setting SYS_STATUS=$SYS_STATUS</log>
+					</otherwise>
+				</choose>
+			</when>
+		</choose>
+	</scheduler>
+	<!-- Scheduler: METEO. Actuate on meteorological systems -->
+	<scheduler>
+		<name>meteo</name>
+		<hash>
+			<variable>HK_METEO_GPSD_GOAL</variable>
+			<variable>HK_METEO_GPSD_STATUS</variable>
+			<variable>HK_METEO_WXD_READ_GOAL</variable>
+			<variable>HK_METEO_WXD_READ_STATUS</variable>
+			<variable>HK_METEO_WXD_WRITE_GOAL</variable>
+			<variable>HK_METEO_WXD_WRITE_STATUS</variable>
+			<variable>HK_TELRUN_DAEMON_STATUS</variable>
+			<variable>HK_TELRUN_DAEMON_GOAL</variable>
+			<variable>HK_TJO_80V_POWER_GOAL</variable>
+			<variable>HK_TJO_80V_POWER_STATUS</variable>
+			<variable>SYS_DOME_STATUS</variable>
+			<variable>SYS_GOAL</variable>
+			<variable>SYS_TJO_STATUS</variable>
+			<variable>SYS_METEO_STATUS</variable>
+		</hash>
+		<log>$LOG_N0 Entering METEO scheduler</log>
+		<!-- Update METEO status before actuating on meteorological systems -->
+		<action>meteo.xml[status]</action>
+		<!-- Actuate on meteorological daemons -->
+		<choose>
+			<!-- Start daemons -->
+			<when>
+				<eval><![CDATA[
+					($SYS_GOAL=='START' ||
+					 $SYS_GOAL=='INIT' ||
+					 $SYS_GOAL=='THERMAL' ||
+					 substr($SYS_GOAL,-5)=='CALIB' ||
+					 substr($SYS_GOAL,-7)=='SCIENCE') &&
+					$HK_TJO_80V_POWER_GOAL=='ON' &&
+					$HK_TJO_80V_POWER_STATUS=='ON' &&
+					($SYS_DOME_STATUS=='GOOD' ||
+					 $SYS_DOME_STATUS=='WARNING') &&
+					($SYS_TJO_STATUS=='GOOD' ||
+					 $SYS_TJO_STATUS=='WARNING') &&
+					($SYS_METEO_STATUS=='GOOD' ||
+					 $SYS_METEO_STATUS=='WARNING')
+				]]></eval>
+				<choose>
+					<!-- Step 1: Start wxd.php -->
+					<when>
+						<eval><![CDATA[
+							$HK_METEO_WXD_WRITE_GOAL=='STOP' ||
+							$HK_METEO_WXD_WRITE_STATUS=='STOP'
+						]]></eval>
+						<send>update HK_METEO_WXD_WRITE_STATUS=STARTING</send>
+						<shell>rund wxd.php -f $FS_FILE_WXD -d $TIME_NOMINAL -h $IP_METEO -e 0</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<action>meteo.xml[wxd_write_status]</action>
+						<send>update HK_METEO_WXD_WRITE_GOAL=RUN</send>
+						<log>$LOG_N0 Setting HK_METEO_WXD_WRITE_GOAL=RUN</log>
+					</when>
+					<!-- Step 2: Start wxd -->
+					<when>
+						<eval><![CDATA[
+							$HK_METEO_WXD_READ_GOAL=='STOP' ||
+							$HK_METEO_WXD_READ_STATUS=='STOP'
+						]]></eval>
+						<send>update HK_METEO_WXD_READ_STATUS=STARTING</send>
+						<shell>rund wxd -st $FS_FILE_WXD -l -</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<action>meteo.xml[wxd_read_status]</action>
+						<send>update HK_METEO_WXD_READ_GOAL=RUN</send>
+						<log>$LOG_N0 Setting HK_METEO_WXD_READ_GOAL=RUN</log>
+					</when>
+					<!-- Step 3: Start gpsd -->
+					<when>
+						<eval><![CDATA[
+							$HK_METEO_GPSD_GOAL=='STOP' ||
+							$HK_METEO_GPSD_STATUS=='STOP'
+						]]></eval>
+						<send>update HK_METEO_GPSD_STATUS=STARTING</send>
+						<shell>rund gpsd -fsac</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<action>meteo.xml[gpsd_status]</action>
+						<send>update HK_METEO_GPSD_GOAL=RUN</send>
+						<log>$LOG_N0 Setting HK_METEO_GPSD_GOAL=RUN</log>
+					</when>
+				</choose>
+			</when>
+			<!-- Stop daemons -->
+			<when>
+				<eval><![CDATA[
+					($SYS_GOAL=='STOP' ||
+					 $SYS_DOME_STATUS=='ERROR' ||
+					 $SYS_TJO_STATUS=='ERROR' ||
+					 $SYS_METEO_STATUS=='ERROR') &&
+					($HK_TELRUN_DAEMON_STATUS=='STOP' &&
+					 $HK_TELRUN_DAEMON_GOAL=='STOP')
+				]]></eval>
+				<choose>
+					<!-- Step 1: Stop gpsd -->
+					<when>
+						<eval><![CDATA[
+							$HK_METEO_GPSD_STATUS!='STOP' ||
+							$HK_METEO_GPSD_GOAL!='STOP'
+						]]></eval>
+						<send>update HK_METEO_GPSD_STATUS=STOPPING</send>
+						<shell>ps ax -o pid:1,command | grep "gpsd -fsac$$" | cut -f 1,1 -d " "</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<!-- Use a trick to define the kill signal when GOAL is stop already -->
+						<php>15-6*strpos($HK_METEO_GPSD_GOAL,'STOP')." ".$STDOUT</php>
+						<shell>kill -$STDOUT</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>rm -f $FS_PID_RUND_GPSD $FS_PID_GPSD</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<action>meteo.xml[gpsd_status]</action>
+						<send>update HK_METEO_GPSD_GOAL=STOP</send>
+						<log>$LOG_N0 Setting HK_METEO_GPSD_GOAL=STOP</log>
+					</when>
+					<!-- Step 2: Stop wxd -->
+					<when>
+						<eval><![CDATA[
+							$HK_METEO_WXD_READ_STATUS!='STOP' ||
+							$HK_METEO_WXD_READ_GOAL!='STOP'
+						]]></eval>
+						<send>update HK_METEO_WXD_READ_STATUS=STOPPING</send>
+						<shell>ps x -o pid:1,command | grep "wxd .* -$$" | cut -f 1,1 -d " "</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<!-- Use a trick to define the kill signal when GOAL is stop already -->
+						<php>15-6*strpos($HK_METEO_WXD_READ_GOAL,'STOP')." ".$STDOUT</php>
+						<shell>kill -$STDOUT</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>rm -f $FS_PID_RUND_WXD_READ $FS_PID_WXD_READ</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<action>meteo.xml[wxd_read_status]</action>
+						<send>update HK_METEO_WXD_READ_GOAL=STOP</send>
+						<log>$LOG_N0 Setting HK_METEO_WXD_READ_GOAL=STOP</log>
+					</when>
+					<!-- Step 3: Stop wxd.php -->
+					<when>
+						<eval><![CDATA[
+							$HK_METEO_WXD_WRITE_STATUS!='STOP' ||
+							$HK_METEO_WXD_WRITE_GOAL!='STOP'
+						]]></eval>
+						<send>update HK_METEO_WXD_WRITE_STATUS=STOPPING</send>
+						<shell>ps x -o pid:1,command | grep "wxd.php .* -e 0$$" | cut -f 1,1 -d " "</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<!-- Use a trick to define the kill signal when GOAL is stop already -->
+						<php>15-6*strpos($HK_METEO_WXD_WRITE_GOAL,'STOP')." ".$STDOUT</php>
+						<shell>kill -$STDOUT</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>rm -f $FS_PID_RUND_WXD_WRITE</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<action>meteo.xml[wxd_write_status]</action>
+						<send>update HK_METEO_WXD_WRITE_GOAL=STOP</send>
+						<log>$LOG_N0 Setting HK_METEO_WXD_WRITE_GOAL=STOP</log>
+					</when>
+				</choose>
+			</when>
+		</choose>
+		<!-- Update METEO status before leaving-->
+		<action>meteo.xml[status]</action>
+	</scheduler>
+	<!-- Scheduler: DOME. Actuate on the dome components -->
+	<scheduler>
+		<name>dome</name>
+		<hash>
+			<variable>HK_DOME_CIRCUITS_POWER_GOAL</variable>
+			<variable>HK_DOME_CIRCUITS_POWER_STATUS</variable>
+			<variable>HK_DOME_LIGHT_POWER_GOAL</variable>
+			<variable>HK_DOME_LIGHT_POWER_STATUS</variable>
+			<variable>HK_TJO_5V_POWER_GOAL</variable>
+			<variable>HK_TJO_5V_POWER_STATUS</variable>
+			<variable>HK_TJO_80V_POWER_GOAL</variable>
+			<variable>HK_TJO_80V_POWER_STATUS</variable>
+			<variable>SYS_DOME_STATUS</variable>
+			<variable>SYS_GOAL</variable>
+			<variable>SYS_STATUS</variable>
+		</hash>
+		<log>$LOG_N0 Entering DOME scheduler</log>
+		<!-- Update dome status before actuating on dome systems -->
+		<action>dome.xml[status]</action>
+		<!-- Actuate on the dome -->
+		<choose>
+			<!-- Switch on the dome circuits -->
+			<when>
+				<eval><![CDATA[
+					($SYS_GOAL=='START' ||
+					 $SYS_GOAL=='INIT' ||
+					 $SYS_GOAL=='THERMAL' ||
+					 substr($SYS_GOAL,-5)=='CALIB' ||
+					 substr($SYS_GOAL,-7)=='SCIENCE') &&
+					($SYS_DOME_STATUS=='GOOD' ||
+					 $SYS_DOME_STATUS=='WARNING') &&
+					($HK_DOME_CIRCUITS_POWER_GOAL=='OFF' ||
+					 $HK_DOME_CIRCUITS_POWER_STATUS=='OFF')
+				]]></eval>
+				<send>update HK_DOME_CIRCUITS_POWER_STATUS=STARTING</send>
+				<shell>snmpset -v 1 -c private $IP_PDU_N0 $OID_PDU_N6 i $PDU_ON</shell>
+				<action>dome.xml[circuits_pdu_status]</action>
+				<send>update HK_DOME_CIRCUITS_POWER_GOAL=ON</send>
+				<log>$LOG_N0 Setting HK_DOME_CIRCUITS_POWER_GOAL=ON</log>
+			</when>
+			<!-- Switch off the dome circuits -->
+			<when>
+				<eval><![CDATA[
+					($SYS_GOAL=='STOP' ||
+					 $SYS_DOME_STATUS=='ERROR') &&
+					($HK_TJO_5V_POWER_GOAL=='OFF' &&
+					 $HK_TJO_5V_POWER_STATUS=='OFF') &&
+					($HK_DOME_CIRCUITS_POWER_STATUS!='OFF' ||
+					 $HK_DOME_CIRCUITS_POWER_GOAL!='OFF')
+				]]></eval>
+				<send>update HK_DOME_CIRCUITS_POWER_STATUS=STOPPING</send>
+				<shell>snmpset -v 1 -c private $IP_PDU_N0 $OID_PDU_N6 i $PDU_OFF</shell>
+				<action>dome.xml[circuits_pdu_status]</action>
+				<send>update HK_DOME_CIRCUITS_POWER_GOAL=OFF</send>
+				<log>$LOG_N0 Setting HK_DOME_CIRCUITS_POWER_GOAL=OFF</log>
+			</when>
+		</choose>
+		<!-- Update dome status -->
+		<action>dome.xml[status]</action>
+		<!-- Actuate on the dome light -->
+		<choose>
+			<!-- Switch on light -->
+			<when>
+				<eval><![CDATA[
+					($SYS_GOAL=='START' ||
+					 $SYS_GOAL=='INIT' ||
+					 $SYS_GOAL=='THERMAL' ||
+					 substr($SYS_GOAL,0,3)=='SEE' ||
+					 substr($SYS_STATUS,-5)=='ERROR') &&
+					($HK_DOME_LIGHT_POWER_GOAL=='OFF' ||
+					 $HK_DOME_LIGHT_POWER_STATUS=='OFF')
+				]]></eval>
+				<send>update HK_DOME_LIGHT_POWER_STATUS=STARTING</send>
+				<shell>snmpset -v 1 -c private $IP_PDU_N0 $OID_PDU_N7 i $PDU_ON</shell>
+				<action>dome.xml[light_pdu_status]</action>
+				<send>update HK_DOME_LIGHT_POWER_GOAL=ON</send>
+				<log>$LOG_N0 Setting HK_DOME_LIGHT_POWER_GOAL=ON</log>
+			</when>
+			<!-- Switch off light -->
+			<when>
+				<eval><![CDATA[
+					(($SYS_GOAL=='CALIB' ||
+				  	  $SYS_GOAL=='SCIENCE') &&
+					 ($HK_TJO_80V_POWER_GOAL=='ON' &&
+					  $HK_TJO_80V_POWER_STATUS=='ON') ||
+					 ($SYS_GOAL=='STOP' &&
+					  $HK_DOME_CIRCUITS_POWER_GOAL=='OFF' &&
+					  $HK_DOME_CIRCUITS_POWER_STATUS=='OFF')) &&
+					substr($SYS_STATUS,-5)!='ERROR' &&
+					($HK_DOME_LIGHT_POWER_GOAL!='OFF' ||
+					 $HK_DOME_LIGHT_POWER_STATUS!='OFF')
+				]]></eval>
+				<send>update HK_DOME_LIGHT_POWER_STATUS=STOPPING</send>
+				<shell>snmpset -v 1 -c private $IP_PDU_N0 $OID_PDU_N7 i $PDU_OFF</shell>
+				<action>dome.xml[light_pdu_status]</action>
+				<send>update HK_DOME_LIGHT_POWER_GOAL=OFF</send>
+				<log>$LOG_N0 Setting HK_DOME_LIGHT_POWER_GOAL=OFF</log>
+			</when>
+		</choose>
+		<!-- Update dome status before leaving-->
+		<action>dome.xml[status]</action>
+	</scheduler>
+	<!-- Scheduler: TJO. Actuate on the TJO components -->
+	<scheduler>
+		<name>tjo</name>
+		<hash>
+			<variable>HK_DOME_CIRCUITS_POWER_GOAL</variable>
+			<variable>HK_DOME_CIRCUITS_POWER_STATUS</variable>
+			<variable>HK_TJO_5V_POWER_GOAL</variable>
+			<variable>HK_TJO_5V_POWER_STATUS</variable>
+			<variable>HK_TJO_12V_POWER_GOAL</variable>
+			<variable>HK_TJO_12V_POWER_STATUS</variable>
+			<variable>HK_TJO_24V_POWER_GOAL</variable>
+			<variable>HK_TJO_24V_POWER_STATUS</variable>
+			<variable>HK_TJO_80V_POWER_GOAL</variable>
+			<variable>HK_TJO_80V_POWER_STATUS</variable>
+			<variable>HK_TJO_CSIMCD_GOAL</variable>
+			<variable>HK_TJO_CSIMCD_STATUS</variable>
+			<variable>HK_TJO_TELESCOPED_GOAL</variable>
+			<variable>HK_TJO_TELESCOPED_STATUS</variable>
+			<variable>HK_TELRUN_DAEMON_STATUS</variable>
+			<variable>HK_TELRUN_DAEMON_GOAL</variable>
+			<variable>SYS_DOME_STATUS</variable>
+			<variable>SYS_GOAL</variable>
+			<variable>SYS_TJO_STATUS</variable>
+		</hash>
+		<log>$LOG_N0 Entering TJO scheduler</log>
+		<!-- Update TJO status before actuating on TJO systems -->
+		<action>tjo.xml[status]</action>
+		<!-- Actuate on the TJO -->
+		<choose>
+			<!-- Start TJO -->
+			<when>
+				<eval><![CDATA[
+					($SYS_GOAL=='START' ||
+					 $SYS_GOAL=='INIT' ||
+					 $SYS_GOAL=='THERMAL' ||
+					 substr($SYS_GOAL,-5)=='CALIB' ||
+					 substr($SYS_GOAL,-7)=='SCIENCE') &&
+					$HK_DOME_CIRCUITS_POWER_GOAL=='ON' &&
+					$HK_DOME_CIRCUITS_POWER_STATUS=='ON' &&
+					($SYS_DOME_STATUS=='GOOD' ||
+					 $SYS_DOME_STATUS=='WARNING') &&
+					($SYS_TJO_STATUS=='GOOD' ||
+					 $SYS_TJO_STATUS=='WARNING')
+				]]></eval>
+				<choose>
+					<!-- Step 1: Switch on 5V power -->
+					<when>
+						<eval><![CDATA[
+							$HK_TJO_5V_POWER_GOAL=='OFF' ||
+							$HK_TJO_5V_POWER_STATUS=='OFF'
+						]]></eval>
+						<send>update HK_TJO_5V_POWER_STATUS=STARTING</send>
+						<shell>snmpset -v 1 -c private $IP_PDU_N1 $OID_PDU_N1 i $PDU_ON</shell>
+						<action>tjo.xml[5v_pdu_status]</action>
+						<send>update HK_TJO_5V_POWER_GOAL=ON</send>
+						<log>$LOG_N0 Setting HK_TJO_5V_POWER_GOAL=ON</log>
+					</when>
+					<!-- Step 2: Switch on 12V power -->
+					<when>
+						<eval><![CDATA[
+							$HK_TJO_12V_POWER_GOAL=='OFF' ||
+							$HK_TJO_12V_POWER_STATUS=='OFF'
+						]]></eval>
+						<send>update HK_TJO_12V_POWER_STATUS=STARTING</send>
+						<shell>snmpset -v 1 -c private $IP_PDU_N1 $OID_PDU_N4 i $PDU_ON</shell>
+						<action>tjo.xml[12v_pdu_status]</action>
+						<send>update HK_TJO_12V_POWER_GOAL=ON</send>
+						<log>$LOG_N0 Setting HK_TJO_12V_POWER_GOAL=ON</log>
+					</when>
+					<!-- Step 3: Switch on 24V power -->
+					<when>
+						<eval><![CDATA[
+							$HK_TJO_24V_POWER_GOAL=='OFF' ||
+							$HK_TJO_24V_POWER_STATUS=='OFF'
+						]]></eval>
+						<send>update HK_TJO_24V_POWER_STATUS=STARTING</send>
+						<shell>snmpset -v 1 -c private $IP_PDU_N1 $OID_PDU_N2 i $PDU_ON</shell>
+						<action>tjo.xml[24v_pdu_status]</action>
+						<send>update HK_TJO_24V_POWER_GOAL=ON</send>
+						<log>$LOG_N0 Setting HK_TJO_24V_POWER_GOAL=ON</log>
+					</when>
+					<!-- Step 4: Start telescoped+csimcd -->
+					<when>
+						<eval><![CDATA[
+							$HK_TJO_CSIMCD_GOAL=='STOP' ||
+							$HK_TJO_CSIMCD_STATUS=='STOP' ||
+							$HK_TJO_TELESCOPED_GOAL=='STOP' ||
+							$HK_TJO_TELESCOPED_STATUS=='STOP'
+						]]></eval>
+						<send>update HK_TJO_TELESCOPED_STATUS=STARTING</send>
+						<send>update HK_TJO_CSIMCD_STATUS=STARTING</send>
+						<shell>rund telescoped</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>tail -n 0 -f $FS_LOG_TELESCOPED | grep "cover.cfg" -m 1</shell>
+						<timeout>$TIME_RUND_TELESCOPED</timeout>
+						<action>tjo.xml[telescoped_status]</action>
+						<send>update HK_TJO_TELESCOPED_GOAL=RUN</send>
+						<log>$LOG_N0 Setting HK_TJO_TELESCOPED_GOAL=RUN</log>
+						<action>tjo.xml[csimcd_status]</action>
+						<send>update HK_TJO_CSIMCD_GOAL=RUN</send>
+						<log>$LOG_N0 Setting HK_TJO_CSIMCD_GOAL=RUN</log>
+					</when>
+					<!-- Step 5: Switch on 80V power -->
+					<when>
+						<eval><![CDATA[
+							$HK_TJO_80V_POWER_GOAL=='OFF' ||
+							$HK_TJO_80V_POWER_STATUS=='OFF'
+						]]></eval>
+						<send>update HK_TJO_80V_POWER_STATUS=STARTING</send>
+						<shell>snmpset -v 1 -c private $IP_PDU_N1 $OID_PDU_N3 i $PDU_ON</shell>
+						<action>tjo.xml[80v_pdu_status]</action>
+						<send>update HK_TJO_80V_POWER_GOAL=ON</send>
+						<log>$LOG_N0 Setting HK_TJO_80V_POWER_GOAL=ON</log>
+					</when>
+				</choose>
+			</when>
+			<!-- Stop the TJO -->
+			<when>
+				<eval><![CDATA[
+					($SYS_GOAL=='STOP' ||
+					 $SYS_DOME_STATUS=='ERROR' ||
+					 $SYS_TJO_STATUS=='ERROR') &&
+					$HK_TELRUN_DAEMON_STATUS=='STOP' &&
+					$HK_TELRUN_DAEMON_GOAL=='STOP'
+				]]></eval>
+				<choose>
+					<!-- Step 1: Switch off 80V power -->
+					<when>
+						<eval><![CDATA[
+							$HK_TJO_80V_POWER_STATUS!='OFF' ||
+							$HK_TJO_80V_POWER_GOAL!='OFF'
+						]]></eval>
+						<send>update HK_TJO_80V_POWER_STATUS=STOPPING</send>
+						<shell>snmpset -v 1 -c private $IP_PDU_N1 $OID_PDU_N3 i $PDU_OFF</shell>
+						<action>tjo.xml[80v_pdu_status]</action>
+						<send>update HK_TJO_80V_POWER_GOAL=OFF</send>
+						<log>$LOG_N0 Setting HK_TJO_80V_POWER_GOAL=OFF</log>
+					</when>
+					<!-- Step 2: Stop telescoped -->
+					<when>
+						<eval><![CDATA[
+							$HK_TJO_TELESCOPED_STATUS!='STOP' ||
+							$HK_TJO_TELESCOPED_GOAL!='STOP'
+						]]></eval>
+						<send>update HK_TJO_TELESCOPED_STATUS=STOPPING</send>
+						<shell>ps x -o pid:1,command | grep "telescoped$$" | cut -f 1,1 -d " "</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<!-- Use a trick to define the kill signal when GOAL is stop already -->
+						<php>15-6*strpos($HK_TJO_TELESCOPED_GOAL,'STOP')." ".$STDOUT</php>
+						<shell>kill -$STDOUT</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>rm -f $FS_PID_RUND_TELESCOPED $FS_PID_TELESCOPED</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>rm -f $FS_FIFO_COVER_IN $FS_FIFO_COVER_OUT</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>rm -f $FS_FIFO_DOME_IN $FS_FIFO_DOME_OUT</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>rm -f $FS_FIFO_FILTER_IN $FS_FIFO_FILTER_OUT</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>rm -f $FS_FIFO_FOCUS_IN $FS_FIFO_FOCUS_OUT</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>rm -f $FS_FIFO_TEL_IN $FS_FIFO_TEL_OUT</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>rm -f $FS_FIFO_LIGHTS_IN $FS_FIFO_LIGHTS_OUT</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>rm -f $FS_FIFO_POWERFAIL_IN $FS_FIFO_POWERFAIL_OUT</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<action>tjo.xml[telescoped_status]</action>
+						<send>update HK_TJO_TELESCOPED_GOAL=STOP</send>
+						<log>$LOG_N0 Setting HK_TJO_TELESCOPED_GOAL=STOP</log>
+					</when>
+					<!-- Step 3: Stop csimcd -->
+					<when>
+						<eval><![CDATA[
+							$HK_TJO_CSIMCD_STATUS!='STOP' ||
+							$HK_TJO_CSIMCD_GOAL!='STOP'
+						]]></eval>
+						<send>update HK_TJO_CSIMCD_STATUS=STOPPING</send>
+						<shell>ps x -o pid:1,command | grep "csimcd.*$PORT_CSIMCD$$" | cut -f 1,1 -d " "</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<!-- Use a trick to define the kill signal when GOAL is stop already -->
+						<php>15-6*strpos($HK_TJO_CSIMCD_GOAL,'STOP')." ".$STDOUT</php>
+						<shell>kill -$STDOUT</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<shell>rm -f $FS_PID_RUND_CSIMCD $FS_PID_CSIMCD</shell>
+						<timeout>$TIME_SHORT</timeout>
+						<action>tjo.xml[csimcd_status]</action>
+						<send>update HK_TJO_CSIMCD_GOAL=STOP</send>
+						<log>$LOG_N0 Setting HK_TJO_CSIMCD_GOAL=STOP</log>
+					</when>
+					<!-- Step 4: Switch off 24V power -->
+					<when>
+						<eval><![CDATA[
+							$HK_TJO_24V_POWER_STATUS!='OFF' ||
+							$HK_TJO_24V_POWER_GOAL!='OFF'
+						]]></eval>
+						<send>update HK_TJO_24V_POWER_STATUS=STOPPING</send>
+						<shell>snmpset -v 1 -c private $IP_PDU_N1 $OID_PDU_N2 i $PDU_OFF</shell>
+						<action>tjo.xml[24v_pdu_status]</action>
+						<send>update HK_TJO_24V_POWER_GOAL=OFF</send>
+						<log>$LOG_N0 Setting HK_TJO_24V_POWER_GOAL=OFF</log>
+					</when>
+					<!-- Step 5: Switch off 12V power -->
+					<when>
+						<eval><![CDATA[
+							$HK_TJO_12V_POWER_STATUS!='OFF' ||
+							$HK_TJO_12V_POWER_GOAL!='OFF'
+						]]></eval>
+						<send>update HK_TJO_12V_POWER_STATUS=STOPPING</send>
+						<shell>snmpset -v 1 -c private $IP_PDU_N1 $OID_PDU_N4 i $PDU_OFF</shell>
+						<action>tjo.xml[12v_pdu_status]</action>
+						<send>update HK_TJO_12V_POWER_GOAL=OFF</send>
+						<log>$LOG_N0 Setting HK_TJO_12V_POWER_GOAL=OFF</log>
+					</when>
+					<!-- Step 6: Switch off 5V power -->
+					<when>
+						<eval><![CDATA[
+							$HK_TJO_5V_POWER_STATUS!='OFF' ||
+							$HK_TJO_5V_POWER_GOAL!='OFF'
+						]]></eval>
+						<send>update HK_TJO_5V_POWER_STATUS=STOPPING</send>
+						<shell>snmpset -v 1 -c private $IP_PDU_N1 $OID_PDU_N1 i $PDU_OFF</shell>
+						<action>tjo.xml[5v_pdu_status]</action>
+						<send>update HK_TJO_5V_POWER_GOAL=OFF</send>
+						<log>$LOG_N0 Setting HK_TJO_5V_POWER_GOAL=OFF</log>
+					</when>
+				</choose>
+			</when>
+		</choose>
+		<!-- Update TJO status before leaving-->
+		<action>tjo.xml[status]</action>
+	</scheduler>
+	<!-- Scheduler: MEIA. Actuate on MEIA instrument -->
+	<scheduler>
+		<name>meia</name>
+		<hash>
+			<variable>HK_MEIA_CAMERAD_GOAL</variable>
+			<variable>HK_MEIA_CAMERAD_STATUS</variable>
+			<variable>HK_MEIA_TEMP_GOAL</variable>
+			<variable>HK_MEIA_TEMP_STATUS</variable>
+			<variable>HK_TELRUN_DAEMON_STATUS</variable>
+			<variable>HK_TELRUN_DAEMON_GOAL</variable>
+			<variable>HK_TJO_80V_POWER_GOAL</variable>
+			<variable>HK_TJO_80V_POWER_STATUS</variable>
+			<variable>SYS_DOME_STATUS</variable>
+			<variable>SYS_GOAL</variable>
+			<variable>SYS_MEIA_STATUS</variable>
+			<variable>SYS_TJO_STATUS</variable>
+		</hash>
+		<log>$LOG_N0 Entering MEIA scheduler</log>
+		<!-- Update MEIA status before actuating on MEIA systems -->
+		<action>meia.xml[status]</action>
+		<!-- Actuate on MEIA -->
+		<choose>
+			<!-- Start MEIA -->
+			<when>
+				<eval><![CDATA[
+					($SYS_GOAL=='START' ||
+					 $SYS_GOAL=='INIT' ||
+					 $SYS_GOAL=='THERMAL' ||
+					 substr($SYS_GOAL,-5)=='CALIB' ||
+					 substr($SYS_GOAL,-7)=='SCIENCE') &&
+					$HK_TJO_80V_POWER_GOAL=='ON' &&
+					$HK_TJO_80V_POWER_STATUS=='ON' &&
+					($SYS_DOME_STATUS=='GOOD' ||
+					 $SYS_DOME_STATUS=='WARNING') &&
+					($SYS_TJO_STATUS=='GOOD' ||
+					 $SYS_TJO_STATUS=='WARNING') &&
+					($SYS_MEIA_STATUS=='GOOD' ||
+					 $SYS_MEIA_STATUS=='WARNING') &&
+					($HK_MEIA_CAMERAD_GOAL=='STOP' ||
+					 $HK_MEIA_CAMERAD_STATUS=='STOP')
+				]]></eval>
+				<send>update HK_MEIA_CAMERAD_STATUS=STARTING</send>
+				<shell>rund camerad</shell>
+				<timeout>$TIME_SHORT</timeout>
+				<shell>tail -n 0 -f $FS_LOG_CAMERAD | grep "ID_INSTRUME = MEIA" -m 1</shell>
+				<timeout>$TIME_RUND_CAMERAD</timeout>
+				<action>meia.xml[camerad_status]</action>
+				<send>update HK_MEIA_CAMERAD_GOAL=RUN</send>
+				<log>$LOG_N0 Setting HK_MEIA_CAMERAD_GOAL=RUN</log>
+				<action>meia.xml[temp_status]</action>
+				<send>update HK_MEIA_TEMP_GOAL=COOL</send>
+				<log>$LOG_N0 Setting HK_MEIA_TEMP_GOAL=COOL</log>
+			</when>
+			<!-- Stop MEIA -->
+			<when>
+				<eval><![CDATA[
+					($SYS_GOAL=='STOP' ||
+					 $SYS_DOME_STATUS=='ERROR' ||
+					 $SYS_TJO_STATUS=='ERROR' ||
+					 $SYS_MEIA_STATUS=='ERROR') &&
+					($HK_TELRUN_DAEMON_STATUS=='STOP' &&
+					 $HK_TELRUN_DAEMON_GOAL=='STOP')
+				]]></eval>
+				<send>update HK_MEIA_CAMERAD_STATUS=STOPPING</send>
+				<shell>ps x -o pid:1,command | grep "camerad$$" | cut -f 1,1 -d " "</shell>
+				<timeout>$TIME_SHORT</timeout>
+				<!-- Use a trick to define the kill signal when GOAL is stop already -->
+				<php>15-6*strpos($HK_MEIA_CAMERAD_GOAL,'STOP')." ".$STDOUT</php>
+				<shell>kill -$STDOUT</shell>
+				<timeout>$TIME_SHORT</timeout>
+				<shell>rm -f $FS_PID_RUND_CAMERAD $FS_PID_CAMERAD</shell>
+				<timeout>$TIME_SHORT</timeout>
+				<shell>rm -f $FS_FIFO_CAMERA_IN $FS_FIFO_CAMERA_OUT</shell>
+				<timeout>$TIME_SHORT</timeout>
+				<action>meia.xml[camerad_status]</action>
+				<send>update HK_MEIA_CAMERAD_GOAL=STOP</send>
+				<log>$LOG_N0 Setting HK_MEIA_CAMERAD_GOAL=STOP</log>
+				<action>meia.xml[temp_status]</action>
+				<send>update HK_MEIA_TEMP_GOAL=OFF</send>
+				<log>$LOG_N0 Setting HK_MEIA_TEMP_GOAL=OFF</log>
+			</when>
+		</choose>
+		<!-- Update MEIA status before leaving -->
+		<action>meia.xml[status]</action>
+	</scheduler>
+	<!-- Scheduler: TELRUN. Actuate on TELRUN daemon -->
+	<scheduler>
+		<name>telrun</name>
+		<hash>
+			<variable>HK_DOME_LIGHT_POWER_STATUS</variable>
+			<variable>HK_DOME_LIGHT_POWER_GOAL</variable>
+			<variable>HK_TELRUN_DAEMON_STATUS</variable>
+			<variable>HK_TELRUN_DAEMON_GOAL</variable>
+			<variable>HK_TELRUN_NCAL_STATUS</variable>
+			<variable>HK_TELRUN_NLINES_STATUS</variable>
+			<variable>HK_TELRUN_NOBS_STATUS</variable>
+			<variable>HK_TJO_80V_POWER_GOAL</variable>
+			<variable>HK_TJO_80V_POWER_STATUS</variable>
+			<variable>SYS_DOME_STATUS</variable>
+			<variable>SYS_GOAL</variable>
+			<variable>SYS_MEIA_STATUS</variable>
+			<variable>SYS_TJO_STATUS</variable>
+		</hash>
+		<log>$LOG_N0 Entering TELRUN scheduler</log>
+		<!-- Update TELRUN status before actuating on telrun -->
+		<action>telrun.xml[status]</action>
+		<!-- Actuate on telrun daemon -->
+		<choose>
+			<!-- Start telrun -->
+			<when>
+				<eval><![CDATA[
+					((($SYS_GOAL=='CALIB' ||
+					   $SYS_GOAL=='SCIENCE') &&
+					  ($HK_DOME_LIGHT_POWER_STATUS=='OFF' &&
+					   $HK_DOME_LIGHT_POWER_GOAL=='OFF')) ||
+					 (($SYS_GOAL=='SEECALIB' ||
+					   $SYS_GOAL=='SEESCIENCE') &&
+					  ($HK_DOME_LIGHT_POWER_STATUS=='ON' &&
+ 					   $HK_DOME_LIGHT_POWER_GOAL=='ON'))) &&
+					$HK_TJO_80V_POWER_GOAL=='ON' &&
+					$HK_TJO_80V_POWER_STATUS=='ON' &&
+					$SYS_DOME_STATUS=='GOOD' &&
+					$SYS_MEIA_STATUS=='GOOD' &&
+					($SYS_TJO_STATUS=='GOOD' ||
+					 $SYS_TJO_STATUS=='WARNING') &&
+					($SYS_TELRUN_STATUS=='GOOD' ||
+					 $SYS_TELRUN_STATUS=='WARNING') &&
+					($HK_TELRUN_DAEMON_STATUS=='STOP' ||
+					 $HK_TELRUN_DAEMON_GOAL=='STOP')
+				]]></eval>
+				<send>update HK_TELRUN_DAEMON_STATUS=STARTING</send>
+				<shell>rund telrun</shell>
+				<timeout>$TIME_SHORT</timeout>
+				<action>telrun.xml[daemon_status]</action>
+				<send>update HK_TELRUN_DAEMON_GOAL=RUN</send>
+				<log>$LOG_N0 Setting HK_TELRUN_DAEMON_GOAL=RUN</log>
+			</when>
+			<!-- Stop telrun -->
+			<when>
+				<eval><![CDATA[
+					($SYS_GOAL=='STOP' ||
+					 $SYS_GOAL=='START' ||
+					 $SYS_GOAL=='INIT' ||
+					 $SYS_GOAL=='THERMAL'||
+					 $SYS_DOME_STATUS=='ERROR' ||
+					 $SYS_DOME_STATUS=='WARNING' ||
+					 $SYS_TJO_STATUS=='ERROR' ||
+					 $SYS_MEIA_STATUS=='ERROR' ||
+					 $SYS_MEIA_STATUS=='WARNING' ||
+					 $SYS_TELRUN_STATUS=='ERROR') &&
+					($HK_DOME_LIGHT_POWER_STATUS!='OFF' ||
+					 $HK_DOME_LIGHT_POWER_GOAL!='OFF') &&
+					($HK_TELRUN_DAEMON_STATUS!='STOP' ||
+					 $HK_TELRUN_DAEMON_GOAL!='STOP')
+				]]></eval>
+				<send>update HK_TELRUN_DAEMON_STATUS=STOPPING</send>
+				<shell>ps x -o pid:1,command | grep "telrun$$" | cut -f 1,1 -d " "</shell>
+				<timeout>$TIME_SHORT</timeout>
+				<!-- Use a trick to define the kill signal when GOAL is stop already -->
+				<php>15-6*strpos($HK_TELRUN_DAEMON_GOAL,'STOP')." ".$STDOUT</php>
+				<shell>kill -$STDOUT</shell>
+				<timeout>$TIME_SHORT</timeout>
+				<shell>rm -f $FS_PID_RUND_TELRUN $FS_PID_TELRUN</shell>
+				<timeout>$TIME_SHORT</timeout>
+				<action>telrun.xml[daemon_status]</action>
+				<send>update HK_TELRUN_DAEMON_GOAL=STOP</send>
+				<log>$LOG_N0 Setting HK_TELRUN_DAEMON_GOAL=STOP</log>
+			</when>
+		</choose>
+		<!-- Update TELRUN status before leaving -->
+		<action>telrun.xml[status]</action>
+	</scheduler>
+</root>

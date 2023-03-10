@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ___                   ____   ___   ____ ____          ____    ___
+ / _ \ _ __   ___ _ __ |  _ \ / _ \ / ___/ ___|  __   _|___ \  / _ \
+| | | | '_ \ / _ \ '_ \| |_) | | | | |   \___ \  \ \ / / __) || | | |
+| |_| | |_) |  __/ | | |  _ <| |_| | |___ ___) |  \ V / / __/ | |_| |
+ \___/| .__/ \___|_| |_|_| \_\\___/ \____|____/    \_/ |_____(_)___/
+      |_|
+
+OpenROCS: Open Robotic Observatory Control System
+Copyright (C) 2011-2014 by Institut d'Estudis Espacials de Catalunya (IEEC)
+More information in http://www.ieec.cat or ieec@ieec.cat
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<root>
+	<variables>
+		<!-- IPs -->
+		<IP>
+			<SERVER>SERVER_IP</SERVER>
+			<NAS>NAS_IP</NAS>
+			<TELESCOPE>TELESCOPE_IP</TELESCOPE>
+			<REDUNDANT>REDUNDANT_IP</REDUNDANT>
+			<METEO>METEO_IP</METEO>
+			<ROUTER>ROUTER_IP</ROUTER>
+			<DESKTOP>DESKTOP_IP</DESKTOP>
+			<PDU>
+				<N0>PDU_N0_IP</N0>
+				<N1>PDU_N1_IP</N1>
+				<N2>PDU_N2_IP</N2>
+			</PDU>
+			<OTHERS>www.oadm.cat</OTHERS>
+		</IP>
+		<!-- File System paths and files -->
+		<FS>
+			<PID>
+				<TELRUN>/usr/local/telescope/comm/telrun.pid</TELRUN>
+				<CSIMCD>/usr/local/telescope/comm/csimcd.pid</CSIMCD>
+				<TELESCOPED>/usr/local/telescope/comm/telescoped.pid</TELESCOPED>
+				<CAMERAD>/usr/local/telescope/comm/camerad.pid</CAMERAD>
+				<WXD_READ>/usr/local/telescope/comm/wxd.pid</WXD_READ>
+				<GPSD>/usr/local/telescope/comm/gpsd.pid</GPSD>
+				<RUND>
+					<TELRUN>/usr/local/telescope/comm/rund.telrun.pid</TELRUN>
+					<CSIMCD>/usr/local/telescope/comm/rund.csimcd.pid</CSIMCD>
+					<TELESCOPED>/usr/local/telescope/comm/rund.telescoped.pid</TELESCOPED>
+					<CAMERAD>/usr/local/telescope/comm/rund.camerad.pid</CAMERAD>
+					<WXD_WRITE>/usr/local/telescope/comm/rund.wxd.php.pid</WXD_WRITE>
+					<WXD_READ>/usr/local/telescope/comm/rund.wxd.pid</WXD_READ>
+					<GPSD>/usr/local/telescope/comm/rund.gpsd.pid</GPSD>
+				</RUND>
+			</PID>
+			<FIFO>
+				<CAMERA_IN>/usr/local/telescope/comm/Camera.in</CAMERA_IN>
+				<CAMERA_OUT>/usr/local/telescope/comm/Camera.out</CAMERA_OUT>
+				<TEL_IN>/usr/local/telescope/comm/Tel.in</TEL_IN>
+				<TEL_OUT>/usr/local/telescope/comm/Tel.out</TEL_OUT>
+				<COVER_IN>/usr/local/telescope/comm/Cover.in</COVER_IN>
+				<COVER_OUT>/usr/local/telescope/comm/Cover.out</COVER_OUT>
+				<FOCUS_IN>/usr/local/telescope/comm/Focus.in</FOCUS_IN>
+				<FOCUS_OUT>/usr/local/telescope/comm/Focus.out</FOCUS_OUT>
+				<FILTER_IN>/usr/local/telescope/comm/Filter.in</FILTER_IN>
+				<FILTER_OUT>/usr/local/telescope/comm/Filter.out</FILTER_OUT>
+				<DOME_IN>/usr/local/telescope/comm/Dome.in</DOME_IN>
+				<DOME_OUT>/usr/local/telescope/comm/Dome.out</DOME_OUT>
+				<LIGHTS_IN>/usr/local/telescope/comm/Lights.in</LIGHTS_IN>
+				<LIGHTS_OUT>/usr/local/telescope/comm/Lights.out</LIGHTS_OUT>
+				<POWERFAIL_IN>/usr/local/telescope/comm/Powerfail.in</POWERFAIL_IN>
+				<POWERFAIL_OUT>/usr/local/telescope/comm/Powerfail.out</POWERFAIL_OUT>
+			</FIFO>
+			<FILE>
+				<TELRUN>/usr/local/telescope/archive/telrun/telrun.sls</TELRUN>
+				<WXD>/usr/local/telescope/archive/logs/wxd.dat</WXD>
+			</FILE>
+			<LOG>
+				<TELESCOPED>/usr/local/telescope/archive/logs/telescoped.log</TELESCOPED>
+				<CAMERAD>/usr/local/telescope/archive/logs/camerad.log</CAMERAD>
+			</LOG>
+		</FS>
+		<!-- Iteration variables -->
+		<ITER>
+			<UPDATE>1</UPDATE>
+			<CHECK>3</CHECK>
+		</ITER>
+		<!-- Time variables -->
+		<TIME>
+			<NOMINAL>10</NOMINAL>
+			<CHECK>5</CHECK>
+			<SHORT>1</SHORT>
+			<RUND>
+				<TELESCOPED>60</TELESCOPED>
+				<CAMERAD>10</CAMERAD>
+			</RUND>
+			<METEO>
+				<CHECK>60</CHECK>
+			</METEO>
+		</TIME>
+		<!-- Logging level -->
+		<LOG>
+			<N0>Information:</N0>
+			<N1>Warning:</N1>
+			<N2>Minor error:</N2>
+			<N3>Major error:</N3>
+			<N4>Critical error:</N4>
+		</LOG>
+		<!-- PDU status -->
+		<PDU>
+			<ON>1</ON>
+			<OFF>2</OFF>
+		</PDU>
+		<!-- Observatory OIDs -->
+		<OID>
+			<PDU>
+				<N1>.1.3.6.1.4.1.318.1.1.12.3.3.1.1.4.1</N1>
+				<N2>.1.3.6.1.4.1.318.1.1.12.3.3.1.1.4.2</N2>
+				<N3>.1.3.6.1.4.1.318.1.1.12.3.3.1.1.4.3</N3>
+				<N4>.1.3.6.1.4.1.318.1.1.12.3.3.1.1.4.4</N4>
+				<N5>.1.3.6.1.4.1.318.1.1.12.3.3.1.1.4.5</N5>
+				<N6>.1.3.6.1.4.1.318.1.1.12.3.3.1.1.4.6</N6>
+				<N7>.1.3.6.1.4.1.318.1.1.12.3.3.1.1.4.7</N7>
+				<N8>.1.3.6.1.4.1.318.1.1.12.3.3.1.1.4.8</N8>
+			</PDU>
+			<DAVIS>.1.3.6.1.4.1.2021.50.1.4.1.2.5.100.97.118.105.115</DAVIS>
+		</OID>
+		<!-- Ports -->
+		<PORT>
+			<CSIMCD>7623</CSIMCD>
+		</PORT>
+		<!-- Meteorological ranges -->
+		<METEO>
+			<MIN>
+				<TEMPERATURE>-50</TEMPERATURE>
+				<HUMIDITY_DRY>0</HUMIDITY_DRY>
+				<HUMIDITY_WET>90</HUMIDITY_WET>
+				<WIND>0</WIND>
+				<WIND_MEDIUM>13</WIND_MEDIUM>
+				<DIRECTION>0</DIRECTION>
+				<PRESSURE>600</PRESSURE>
+				<RAIN>0</RAIN>
+			</MIN>
+			<MAX>
+				<TEMPERATURE>50</TEMPERATURE>
+				<HUMIDITY>110</HUMIDITY>
+				<WIND_MEDIUM>16</WIND_MEDIUM>
+				<WIND>70</WIND>
+				<DIRECTION>360</DIRECTION>
+				<PRESSURE>1100</PRESSURE>
+				<RAIN>1000</RAIN>
+			</MAX>
+		</METEO>
+	</variables>
+</root>

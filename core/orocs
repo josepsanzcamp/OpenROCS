@@ -1,0 +1,58 @@
+#!/usr/bin/php -q
+<?php
+/*
+  ___                   ____   ___   ____ ____          ____    ___
+ / _ \ _ __   ___ _ __ |  _ \ / _ \ / ___/ ___|  __   _|___ \  / _ \
+| | | | '_ \ / _ \ '_ \| |_) | | | | |   \___ \  \ \ / / __) || | | |
+| |_| | |_) |  __/ | | |  _ <| |_| | |___ ___) |  \ V / / __/ | |_| |
+ \___/| .__/ \___|_| |_|_| \_\\___/ \____|____/    \_/ |_____(_)___/
+      |_|
+
+OpenROCS: Open Robotic Observatory Control System
+Copyright (C) 2011-2014 by Institut d'Estudis Espacials de Catalunya (IEEC)
+More information in http://www.ieec.cat or ieec@ieec.cat
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// TO FIND ALL REQUIRED FILES
+chdir(dirname($_SERVER["SCRIPT_NAME"]));
+// INCLUDES OF ALL SALTOS FILES
+include("php/xml2array.php");
+include("php/array2xml.php");
+include("php/saltos.php");
+// INCLUDE OF ALL OPENROCS FILES
+include("php/functions.php");
+include("php/process.php");
+include("php/define.php");
+include("php/childs.php");
+include("php/checks.php");
+include("php/stack.php");
+include("php/pipes.php");
+include("php/comm.php");
+include("php/gc.php");
+// CONTINUE
+program_error_handler();
+if(!ini_get("date.timezone")) ini_set("date.timezone","Europe/Madrid");
+set_time_limit(0);
+declare(ticks=100);
+garbage_collector_init();
+$file=xml_real_file(__XML_CONFIG__);
+if(!file_exists($file)) show_php_error(array("phperror"=>"Config file not found"));
+$config=xml2array($file);
+$config=check_config($config,xml_real_file(__XML_CONFIG__));
+eval_iniset(getNode(__INI_SET__));
+if(getNode(__PUTENV_PATH__)) list($config[__PUTENV__][__PATH__],$error)=str_replace_with_vars(getNode(__PUTENV_PATH__),config_array_vars());
+eval_putenv(getNode(__PUTENV__));
+include("php/args.php");
+?>

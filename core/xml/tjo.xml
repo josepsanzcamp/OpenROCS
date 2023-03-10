@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ___                   ____   ___   ____ ____          ____    ___
+ / _ \ _ __   ___ _ __ |  _ \ / _ \ / ___/ ___|  __   _|___ \  / _ \
+| | | | '_ \ / _ \ '_ \| |_) | | | | |   \___ \  \ \ / / __) || | | |
+| |_| | |_) |  __/ | | |  _ <| |_| | |___ ___) |  \ V / / __/ | |_| |
+ \___/| .__/ \___|_| |_|_| \_\\___/ \____|____/    \_/ |_____(_)___/
+      |_|
+
+OpenROCS: Open Robotic Observatory Control System
+Copyright (C) 2011-2014 by Institut d'Estudis Espacials de Catalunya (IEEC)
+More information in http://www.ieec.cat or ieec@ieec.cat
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<root>
+	<!-- Actions: TJO. Update variables for TJO -->
+	<actions>
+		<!-- Check the TJO status -->
+		<action>
+			<name>status</name>
+			<php>$SYS_TJO_STATUS</php>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_TJO_5V_POWER_STATUS!=$HK_TJO_5V_POWER_GOAL ||
+						$HK_TJO_12V_POWER_STATUS!=$HK_TJO_12V_POWER_GOAL ||
+						$HK_TJO_24V_POWER_STATUS!=$HK_TJO_24V_POWER_GOAL ||
+						$HK_TJO_80V_POWER_STATUS!=$HK_TJO_80V_POWER_GOAL ||
+						($HK_TELRUN_DAEMON_STATUS=='STOP' &&
+						 (substr($HK_TJO_CSIMCD_STATUS,-strlen($HK_TJO_CSIMCD_GOAL))!=$HK_TJO_CSIMCD_GOAL ||
+						  substr($HK_TJO_TELESCOPED_STATUS,-strlen($HK_TJO_TELESCOPED_GOAL))!=$HK_TJO_TELESCOPED_GOAL))
+					]]></eval>
+					<send>update SYS_TJO_STATUS=ERROR</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$HK_TELRUN_DAEMON_STATUS=='RUN' &&
+						($HK_TJO_CSIMCD_GOAL!=$HK_TJO_CSIMCD_STATUS ||
+						 $HK_TJO_TELESCOPED_GOAL!=$HK_TJO_TELESCOPED_STATUS)
+					]]></eval>
+					<send>update SYS_TJO_STATUS=WARNING</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$HK_TJO_5V_POWER_STATUS==$HK_TJO_5V_POWER_GOAL &&
+						$HK_TJO_12V_POWER_STATUS==$HK_TJO_12V_POWER_GOAL &&
+						$HK_TJO_24V_POWER_STATUS==$HK_TJO_24V_POWER_GOAL &&
+						$HK_TJO_80V_POWER_STATUS==$HK_TJO_80V_POWER_GOAL &&
+						$HK_TJO_CSIMCD_GOAL==$HK_TJO_CSIMCD_STATUS &&
+						$HK_TJO_TELESCOPED_GOAL==$HK_TJO_TELESCOPED_STATUS
+					]]></eval>
+					<send>update SYS_TJO_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update SYS_TJO_STATUS=UNKNOWN</send>
+				</otherwise>
+			</choose>
+			<!-- Log when STATUS changes -->
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$SYS_TJO_STATUS!=$STDOUT
+					]]></eval>
+					<!-- Define the logging level -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								$SYS_TJO_STATUS=='ERROR'
+							]]></eval>
+							<log>$LOG_N2 Setting SYS_TJO_STATUS=$SYS_TJO_STATUS</log>
+						</when>
+						<when>
+							<eval><![CDATA[
+								$SYS_TJO_STATUS=='WARNING'
+							]]></eval>
+							<log>$LOG_N1 Setting SYS_TJO_STATUS=$SYS_TJO_STATUS</log>
+						</when>
+						<when>
+							<eval><![CDATA[
+								$SYS_TJO_STATUS=='GOOD'
+							]]></eval>
+							<log>$LOG_N0 Setting SYS_TJO_STATUS=$SYS_TJO_STATUS</log>
+						</when>
+						<otherwise>
+							<log>$LOG_N1 Setting SYS_TJO_STATUS=$SYS_TJO_STATUS</log>
+						</otherwise>
+					</choose>
+				</when>
+			</choose>
+		</action>
+		<!-- Check TJO power supply: 5V -->
+		<action>
+			<name>5v_pdu_status</name>
+			<shell>snmpget -v1 -c public $IP_PDU_N1 $OID_PDU_N1</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_TJO_5V_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_TJO_5V_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_TJO_5V_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+		<!-- Check TJO power supply: 12V -->
+		<action>
+			<name>12v_pdu_status</name>
+			<shell>snmpget -v1 -c public $IP_PDU_N1 $OID_PDU_N4</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_TJO_12V_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_TJO_12V_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_TJO_12V_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+		<!-- Check TJO power supply: 24V -->
+		<action>
+			<name>24v_pdu_status</name>
+			<shell>snmpget -v1 -c public $IP_PDU_N1 $OID_PDU_N2</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_TJO_24V_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_TJO_24V_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_TJO_24V_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+		<!-- Check TJO power supply: 80V -->
+		<action>
+			<name>80v_pdu_status</name>
+			<shell>snmpget -v1 -c public $IP_PDU_N1 $OID_PDU_N3</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_TJO_80V_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_TJO_80V_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_TJO_80V_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+		<!-- Check telescoped daemon -->
+		<action>
+			<name>telescoped_status</name>
+			<shell>ps x | grep -c "telescoped$$"</shell>
+			<timeout>$TIME_SHORT</timeout>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==0
+					]]></eval>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								!is_file($FS_PID_TELESCOPED) &&
+								!is_file($FS_PID_RUND_TELESCOPED)
+							]]></eval>
+							<send>update HK_TJO_TELESCOPED_STATUS=STOP</send>
+						</when>
+						<otherwise>
+							<send>update HK_TJO_TELESCOPED_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==1
+					]]></eval>
+					<send>update HK_TJO_TELESCOPED_STATUS=HALF_RUN</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==2
+					]]></eval>
+					<shell>ps x | grep -c "rund telescoped$$"</shell>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								$STDOUT1==1
+							]]></eval>
+							<send>update HK_TJO_TELESCOPED_STATUS=RUN</send>
+						</when>
+						<otherwise>
+							<send>update HK_TJO_TELESCOPED_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					<send>update HK_TJO_TELESCOPED_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+		<!-- Check csimcd daemon -->
+		<action>
+			<name>csimcd_status</name>
+			<shell>ps x | grep -c "csimcd.*$PORT_CSIMCD$$"</shell>
+			<timeout>$TIME_SHORT</timeout>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==0
+					]]></eval>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								!is_file($FS_PID_CSIMCD) &&
+								!is_file($FS_PID_RUND_CSIMCD)
+							]]></eval>
+							<send>update HK_TJO_CSIMCD_STATUS=STOP</send>
+						</when>
+						<otherwise>
+							<send>update HK_TJO_CSIMCD_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==1
+					]]></eval>
+					<send>update HK_TJO_CSIMCD_STATUS=HALF_RUN</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==2
+					]]></eval>
+					<shell>ps x | grep -c "rund csimcd.*$PORT_CSIMCD$$"</shell>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								$STDOUT1==1
+							]]></eval>
+							<send>update HK_TJO_CSIMCD_STATUS=RUN</send>
+						</when>
+						<otherwise>
+							<send>update HK_TJO_CSIMCD_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					<send>update HK_TJO_CSIMCD_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+	</actions>
+</root>

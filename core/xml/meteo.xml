@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ___                   ____   ___   ____ ____          ____    ___
+ / _ \ _ __   ___ _ __ |  _ \ / _ \ / ___/ ___|  __   _|___ \  / _ \
+| | | | '_ \ / _ \ '_ \| |_) | | | | |   \___ \  \ \ / / __) || | | |
+| |_| | |_) |  __/ | | |  _ <| |_| | |___ ___) |  \ V / / __/ | |_| |
+ \___/| .__/ \___|_| |_|_| \_\\___/ \____|____/    \_/ |_____(_)___/
+      |_|
+
+OpenROCS: Open Robotic Observatory Control System
+Copyright (C) 2011-2014 by Institut d'Estudis Espacials de Catalunya (IEEC)
+More information in http://www.ieec.cat or ieec@ieec.cat
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<root>
+	<!-- Monitor: METEO. Update variables related with time and -->
+	<!--                 meteorological information -->
+	<actions>
+		<!-- Check the meteorological status (currently, only daemons) -->
+		<action>
+			<name>status</name>
+			<php>$SYS_METEO_STATUS</php>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_TELRUN_DAEMON_STATUS=='STOP' &&
+						(substr($HK_METEO_WXD_READ_STATUS,-strlen($HK_METEO_WXD_READ_GOAL))!=$HK_METEO_WXD_READ_GOAL ||
+						 substr($HK_METEO_WXD_WRITE_STATUS,-strlen($HK_METEO_WXD_WRITE_GOAL))!=$HK_METEO_WXD_WRITE_GOAL ||
+						 substr($HK_METEO_GPSD_STATUS,-strlen($HK_METEO_GPSD_GOAL))!=$HK_METEO_GPSD_GOAL)
+					]]></eval>
+					<send>update SYS_METEO_STATUS=ERROR</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$HK_TELRUN_DAEMON_STATUS=='RUN' &&
+						($HK_METEO_GPSD_GOAL!=$HK_METEO_GPSD_STATUS ||
+						 $HK_METEO_WXD_READ_GOAL!=$HK_METEO_WXD_READ_STATUS ||
+						 $HK_METEO_WXD_WRITE_GOAL!=$HK_METEO_WXD_WRITE_STATUS)
+					]]></eval>
+					<send>update SYS_METEO_STATUS=WARNING</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$HK_METEO_GPSD_GOAL==$HK_METEO_GPSD_STATUS &&
+						$HK_METEO_WXD_READ_GOAL==$HK_METEO_WXD_READ_STATUS &&
+						$HK_METEO_WXD_WRITE_GOAL==$HK_METEO_WXD_WRITE_STATUS
+					]]></eval>
+					<send>update SYS_METEO_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update SYS_METEO_STATUS=UNKNOWN</send>
+				</otherwise>
+			</choose>
+			<!-- Log when STATUS changes -->
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$SYS_METEO_STATUS!=$STDOUT
+					]]></eval>
+					<!-- Define the logging level -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								$SYS_METEO_STATUS=='ERROR'
+							]]></eval>
+							<log>$LOG_N2 Setting SYS_METEO_STATUS=$SYS_METEO_STATUS</log>
+						</when>
+						<when>
+							<eval><![CDATA[
+								$SYS_METEO_STATUS=='WARNING'
+							]]></eval>
+							<log>$LOG_N1 Setting SYS_METEO_STATUS=$SYS_METEO_STATUS</log>
+						</when>
+						<when>
+							<eval><![CDATA[
+								$SYS_METEO_STATUS=='GOOD'
+							]]></eval>
+							<log>$LOG_N0 Setting SYS_METEO_STATUS=$SYS_METEO_STATUS</log>
+						</when>
+						<otherwise>
+							<log>$LOG_N1 Setting SYS_METEO_STATUS=$SYS_METEO_STATUS</log>
+						</otherwise>
+					</choose>
+				</when>
+			</choose>
+		</action>
+		<!-- Check wxd.php daemon -->
+		<action>
+			<name>wxd_write_status</name>
+			<shell>ps x | grep -c "wxd.php .* -e 0$$"</shell>
+			<timeout>$TIME_SHORT</timeout>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==0
+					]]></eval>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								!is_file($FS_PID_RUND_WXD_WRITE)
+							]]></eval>
+							<send>update HK_METEO_WXD_WRITE_STATUS=STOP</send>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_WXD_WRITE_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==1
+					]]></eval>
+					<send>update HK_METEO_WXD_WRITE_STATUS=HALF_RUN</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==2
+					]]></eval>
+					<shell>ps x | grep -c "rund wxd.php .* -e 0$$"</shell>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								$STDOUT1==1
+							]]></eval>
+							<send>update HK_METEO_WXD_WRITE_STATUS=RUN</send>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_WXD_WRITE_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					<send>update HK_METEO_WXD_WRITE_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+		<!-- Check wxd daemon -->
+		<action>
+			<name>wxd_read_status</name>
+			<shell>ps x | grep -c "wxd .* -$$"</shell>
+			<timeout>$TIME_SHORT</timeout>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==0
+					]]></eval>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								!is_file($FS_PID_WXD_READ) &&
+								!is_file($FS_PID_RUND_WXD_READ)
+							]]></eval>
+							<send>update HK_METEO_WXD_READ_STATUS=STOP</send>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_WXD_READ_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==1
+					]]></eval>
+					<send>update HK_METEO_WXD_READ_STATUS=HALF_RUN</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==2
+					]]></eval>
+					<shell>ps x | grep -c "rund wxd .* -$$"</shell>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								$STDOUT1==1
+							]]></eval>
+							<send>update HK_METEO_WXD_READ_STATUS=RUN</send>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_WXD_READ_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					<send>update HK_METEO_WXD_READ_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+		<!-- Check gpsd daemon -->
+		<action>
+			<name>gpsd_status</name>
+			<shell>ps ax | grep -c "gpsd -fsac$$"</shell>
+			<timeout>$TIME_SHORT</timeout>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==0
+					]]></eval>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								!is_file($FS_PID_GPSD) &&
+								!is_file($FS_PID_RUND_GPSD)
+							]]></eval>
+							<send>update HK_METEO_GPSD_STATUS=STOP</send>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_GPSD_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==1
+					]]></eval>
+					<send>update HK_METEO_GPSD_STATUS=HALF_RUN</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==2
+					]]></eval>
+					<shell>ps ax | grep -c "rund gpsd -fsac$$"</shell>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								$STDOUT1==1
+							]]></eval>
+							<send>update HK_METEO_GPSD_STATUS=RUN</send>
+						</when>
+						<otherwise>
+							<send>update HK_METEO_GPSD_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					<send>update HK_METEO_GPSD_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+	</actions>
+</root>

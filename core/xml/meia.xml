@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ___                   ____   ___   ____ ____          ____    ___
+ / _ \ _ __   ___ _ __ |  _ \ / _ \ / ___/ ___|  __   _|___ \  / _ \
+| | | | '_ \ / _ \ '_ \| |_) | | | | |   \___ \  \ \ / / __) || | | |
+| |_| | |_) |  __/ | | |  _ <| |_| | |___ ___) |  \ V / / __/ | |_| |
+ \___/| .__/ \___|_| |_|_| \_\\___/ \____|____/    \_/ |_____(_)___/
+      |_|
+
+OpenROCS: Open Robotic Observatory Control System
+Copyright (C) 2011-2014 by Institut d'Estudis Espacials de Catalunya (IEEC)
+More information in http://www.ieec.cat or ieec@ieec.cat
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<root>
+	<!-- Monitor: MEIA. Update variables for MEIA -->
+	<actions>
+		<!-- Check the MEIA status -->
+		<action>
+			<name>status</name>
+			<php>$SYS_MEIA_STATUS</php>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						($HK_TELRUN_DAEMON_STATUS=='STOP' &&
+						 (substr($HK_MEIA_CAMERAD_STATUS,-strlen($HK_MEIA_CAMERAD_GOAL))!=$HK_MEIA_CAMERAD_GOAL ||
+						  substr($HK_MEIA_TEMP_STATUS,0,strlen($HK_MEIA_TEMP_GOAL))!=$HK_MEIA_TEMP_GOAL)) ||
+						($HK_TELRUN_DAEMON_STATUS!='STOP' &&
+						 $HK_MEIA_TEMP_STATUS!=$HK_MEIA_TEMP_GOAL)
+					]]></eval>
+					<send>update SYS_MEIA_STATUS=ERROR</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						($HK_TELRUN_DAEMON_STATUS!='STOP' &&
+						 $HK_MEIA_CAMERAD_STATUS!=$HK_MEIA_CAMERAD_GOAL) ||
+						($HK_TELRUN_DAEMON_STATUS=='STOP' &&
+						 $HK_MEIA_TEMP_STATUS!=$HK_MEIA_TEMP_GOAL)
+					]]></eval>
+					<send>update SYS_MEIA_STATUS=WARNING</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$HK_MEIA_CAMERAD_STATUS==$HK_MEIA_CAMERAD_GOAL &&
+						$HK_MEIA_TEMP_STATUS==$HK_MEIA_TEMP_GOAL
+					]]></eval>
+					<send>update SYS_MEIA_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update SYS_MEIA_STATUS=UNKNOWN</send>
+				</otherwise>
+			</choose>
+			<!-- Log when STATUS changes -->
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$SYS_MEIA_STATUS!=$STDOUT
+					]]></eval>
+					<!-- Define the logging level -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								$SYS_MEIA_STATUS=='ERROR'
+							]]></eval>
+							<log>$LOG_N2 Setting SYS_MEIA_STATUS=$SYS_MEIA_STATUS</log>
+						</when>
+						<when>
+							<eval><![CDATA[
+								$SYS_MEIA_STATUS=='WARNING'
+							]]></eval>
+							<log>$LOG_N1 Setting SYS_MEIA_STATUS=$SYS_MEIA_STATUS</log>
+						</when>
+						<when>
+							<eval><![CDATA[
+								$SYS_MEIA_STATUS=='GOOD'
+							]]></eval>
+							<log>$LOG_N0 Setting SYS_MEIA_STATUS=$SYS_MEIA_STATUS</log>
+						</when>
+						<otherwise>
+							<log>$LOG_N1 Setting SYS_MEIA_STATUS=$SYS_MEIA_STATUS</log>
+						</otherwise>
+					</choose>
+				</when>
+			</choose>
+		</action>
+		<!-- Check camerad daemon -->
+		<action>
+			<name>camerad_status</name>
+			<shell>ps x | grep -c "camerad$$"</shell>
+			<timeout>$TIME_SHORT</timeout>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==0
+					]]></eval>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								!is_file($FS_PID_CAMERAD) &&
+								!is_file($FS_PID_RUND_CAMERAD)
+							]]></eval>
+							<send>update HK_MEIA_CAMERAD_STATUS=STOP</send>
+						</when>
+						<otherwise>
+							<send>update HK_MEIA_CAMERAD_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==1
+					]]></eval>
+					<send>update HK_MEIA_CAMERAD_STATUS=HALF_RUN</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$STDOUT1==2
+					]]></eval>
+					<shell>ps x | grep -c "rund camerad$$"</shell>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								$STDOUT1==1
+							]]></eval>
+							<send>update HK_MEIA_CAMERAD_STATUS=RUN</send>
+						</when>
+						<otherwise>
+							<send>update HK_MEIA_CAMERAD_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+					<send>update HK_MEIA_CAMERAD_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+		<!-- Check MEIA CCD temperature -->
+		<action>
+			<name>temp_status</name>
+			<shell>talon_fifo $FS_FIFO_CAMERA_IN "Temperature" $FS_FIFO_CAMERA_OUT $TIME_SHORT "Current temperature:"</shell>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						is_numeric($STDOUT1)
+					]]></eval>
+					<choose>
+						<when>
+							<eval><![CDATA[
+								$STDOUT6=='Ramping'
+							]]></eval>
+							<send>update SDP_MEIA_TEMP_VALUE=$STDOUT4</send>
+							<send>update HK_MEIA_TEMP_STATUS=COOLING</send>
+						</when>
+						<when>
+							<eval><![CDATA[
+								$STDOUT6=='AtTarg'
+							]]></eval>
+							<send>update SDP_MEIA_TEMP_VALUE=$STDOUT4</send>
+							<send>update HK_MEIA_TEMP_STATUS=COOL</send>
+						</when>
+						<otherwise>
+							<send>update SDP_MEIA_TEMP_VALUE=0</send>
+							<send>update HK_MEIA_TEMP_STATUS=ERROR</send>
+						</otherwise>
+					</choose>
+				</when>
+				<when>
+					<eval><![CDATA[
+						strpos($STDOUT,"Fifo to read not found")!==FALSE
+					]]></eval>
+					<send>update SDP_MEIA_TEMP_VALUE=0</send>
+					<send>update HK_MEIA_TEMP_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update SDP_MEIA_TEMP_VALUE=0</send>
+					<send>update HK_MEIA_TEMP_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+	</actions>
+</root>

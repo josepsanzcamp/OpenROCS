@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ___                   ____   ___   ____ ____          ____    ___
+ / _ \ _ __   ___ _ __ |  _ \ / _ \ / ___/ ___|  __   _|___ \  / _ \
+| | | | '_ \ / _ \ '_ \| |_) | | | | |   \___ \  \ \ / / __) || | | |
+| |_| | |_) |  __/ | | |  _ <| |_| | |___ ___) |  \ V / / __/ | |_| |
+ \___/| .__/ \___|_| |_|_| \_\\___/ \____|____/    \_/ |_____(_)___/
+      |_|
+
+OpenROCS: Open Robotic Observatory Control System
+Copyright (C) 2011-2014 by Institut d'Estudis Espacials de Catalunya (IEEC)
+More information in http://www.ieec.cat or ieec@ieec.cat
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<root>
+	<actions>
+		<!-- Check dome status -->
+		<action>
+			<name>status</name>
+			<php>$SYS_DOME_STATUS</php>
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$HK_DOME_CIRCUITS_POWER_STATUS!=$HK_DOME_CIRCUITS_POWER_GOAL
+					]]></eval>
+					<send>update SYS_DOME_STATUS=ERROR</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$HK_DOME_LIGHT_POWER_STATUS!=$HK_DOME_LIGHT_POWER_GOAL
+					]]></eval>
+					<send>update SYS_DOME_STATUS=WARNING</send>
+				</when>
+				<when>
+					<eval><![CDATA[
+						$HK_DOME_CIRCUITS_POWER_STATUS==$HK_DOME_CIRCUITS_POWER_GOAL &&
+						$HK_DOME_LIGHT_POWER_STATUS==$HK_DOME_LIGHT_POWER_GOAL
+					]]></eval>
+					<send>update SYS_DOME_STATUS=GOOD</send>
+				</when>
+				<otherwise>
+					<send>update SYS_DOME_STATUS=UNKNOWN</send>
+				</otherwise>
+			</choose>
+			<!-- Log when STATUS changes -->
+			<choose>
+				<when>
+					<eval><![CDATA[
+						$SYS_DOME_STATUS!=$STDOUT
+					]]></eval>
+					<!-- Define the logging level -->
+					<choose>
+						<when>
+							<eval><![CDATA[
+								$SYS_DOME_STATUS=='ERROR'
+							]]></eval>
+							<log>$LOG_N2 Setting SYS_DOME_STATUS=$SYS_DOME_STATUS</log>
+						</when>
+						<when>
+							<eval><![CDATA[
+								$SYS_DOME_STATUS=='WARNING'
+							]]></eval>
+							<log>$LOG_N1 Setting SYS_DOME_STATUS=$SYS_DOME_STATUS</log>
+						</when>
+						<when>
+							<eval><![CDATA[
+								$SYS_DOME_STATUS=='GOOD'
+							]]></eval>
+							<log>$LOG_N0 Setting SYS_DOME_STATUS=$SYS_DOME_STATUS</log>
+						</when>
+						<otherwise>
+							<log>$LOG_N1 Setting SYS_DOME_STATUS=$SYS_DOME_STATUS</log>
+						</otherwise>
+					</choose>
+				</when>
+			</choose>
+		</action>
+		<!-- Check dome circuits power -->
+		<action>
+			<name>circuits_pdu_status</name>
+			<shell>snmpget -v1 -c public $IP_PDU_N0 $OID_PDU_N6</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_DOME_CIRCUITS_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_DOME_CIRCUITS_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_DOME_CIRCUITS_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+		<!-- Check dome light power -->
+		<action>
+			<name>light_pdu_status</name>
+			<shell>snmpget -v1 -c public $IP_PDU_N0 $OID_PDU_N7</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_DOME_LIGHT_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_DOME_LIGHT_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_DOME_LIGHT_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+		<!-- Check dome flats power -->
+		<action>
+			<name>flats_pdu_status</name>
+			<shell>snmpget -v1 -c public $IP_PDU_N0 $OID_PDU_N5</shell>
+			<choose>
+				<when>
+					<eval>$STDOUT4===$PDU_ON</eval>
+					<send>update HK_DOME_FLATS_POWER_STATUS=ON</send>
+				</when>
+				<when>
+					<eval>$STDOUT4===$PDU_OFF</eval>
+					<send>update HK_DOME_FLATS_POWER_STATUS=OFF</send>
+				</when>
+				<otherwise>
+					<send>update HK_DOME_FLATS_POWER_STATUS=ERROR</send>
+				</otherwise>
+			</choose>
+		</action>
+	</actions>
+</root>
