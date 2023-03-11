@@ -77,7 +77,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 		<pipes>5</pipes>
 	</retries>
 	<ini_set>
-		<session.bug_compat_42>On</session.bug_compat_42>
+		<!--<session.bug_compat_42>On</session.bug_compat_42>-->
 		<register_globals>Off</register_globals>
 		<memory_limit>128M</memory_limit>
 		<max_execution_time>0</max_execution_time>
