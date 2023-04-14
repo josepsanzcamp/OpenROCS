@@ -43,9 +43,9 @@ Available commands that need parameters:
 ```
 
 The documentation is found in the docs directory:
-- OpenROCS-Documentation.pdf => This document contains the original documentation published in SourceForge at year 2012.
-- pfc_josep_sanz.pdf => This document contains the final work used in the defense of my degree studies published at year 2015
-- presentacion.pdf => This document contains the presentation used in the defense of my degree studies published at year 2015
+- ![OpenROCS-Documentation.pdf](docs/OpenROCS-Documentation.pdf) :link: This document contains the original documentation published in SourceForge at year 2012.
+- ![pfc_josep_sanz.pdf](docs/pfc_josep_sanz.pdf) :link: This document contains the final work used in the defense of my degree studies published at year 2015
+- ![presentacion.pdf](docs/presentacion.pdf) :link: This document contains the presentation used in the defense of my degree studies published at year 2015
 
 
 # License
